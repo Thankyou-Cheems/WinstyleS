@@ -2,10 +2,10 @@
 WinstyleSApp - 主应用窗口
 """
 
-import customtkinter as ctk
+import customtkinter as ctk  # type: ignore[import-untyped]
 
 
-class WinstyleSApp(ctk.CTk):
+class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
     """
     WinstyleS 主应用窗口
 

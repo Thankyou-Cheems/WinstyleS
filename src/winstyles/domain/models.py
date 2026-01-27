@@ -128,13 +128,15 @@ class Manifest(BaseModel):
     created_by: str = Field("WinstyleS", description="创建工具")
 
     source_system: SourceSystem = Field(..., description="来源系统信息")
-    export_options: ExportOptions = Field(default_factory=ExportOptions, description="导出选项")
+    export_options: ExportOptions = Field(
+        default_factory=ExportOptions.model_construct, description="导出选项"
+    )
 
     fonts: list[FontInfo] = Field(default_factory=list, description="字体列表")
     registry_entries: list[RegistryEntry] = Field(default_factory=list, description="注册表条目")
 
     import_instructions: ImportInstructions = Field(
-        default_factory=ImportInstructions, description="导入说明"
+        default_factory=ImportInstructions.model_construct, description="导入说明"
     )
 
     class Config:

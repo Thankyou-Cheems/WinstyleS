@@ -39,7 +39,7 @@ class SystemAPI:
                 5000,
                 ctypes.byref(wintypes.DWORD()),
             )
-            return result != 0
+            return int(result) != 0
         except Exception:
             return False
 
@@ -57,7 +57,7 @@ class SystemAPI:
         try:
             # AddFontResourceW
             result = ctypes.windll.gdi32.AddFontResourceW(font_path)
-            if result > 0:
+            if int(result) > 0:
                 # 通知系统字体已更改
                 ctypes.windll.user32.SendMessageTimeoutW(
                     HWND_BROADCAST,
@@ -86,7 +86,7 @@ class SystemAPI:
         """
         try:
             result = ctypes.windll.gdi32.RemoveFontResourceW(font_path)
-            if result:
+            if int(result):
                 ctypes.windll.user32.SendMessageTimeoutW(
                     HWND_BROADCAST,
                     WM_SETTINGCHANGE,
@@ -110,7 +110,7 @@ class SystemAPI:
             是否是管理员
         """
         try:
-            return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            return int(ctypes.windll.shell32.IsUserAnAdmin()) != 0
         except Exception:
             return False
 
@@ -142,7 +142,7 @@ class SystemAPI:
             )
 
             # 返回值大于 32 表示成功
-            return result > 32
+            return int(result) > 32
         except Exception:
             return False
 

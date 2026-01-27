@@ -10,7 +10,7 @@ FontScanner - 系统字体扫描器
 from typing import Any
 
 from winstyles.domain.models import AssociatedFile, ScannedItem
-from winstyles.domain.types import SourceType
+from winstyles.domain.types import ChangeType, SourceType
 from winstyles.plugins.base import BaseScanner
 
 
@@ -52,6 +52,8 @@ class FontSubstitutesScanner(BaseScanner):
                     category=self.category,
                     key=name,
                     current_value=value,
+                    default_value=None,
+                    change_type=ChangeType.MODIFIED,
                     source_type=SourceType.REGISTRY,
                     source_path=f"HKLM\\{self.REGISTRY_PATH}\\{name}",
                 )
@@ -133,6 +135,8 @@ class FontLinkScanner(BaseScanner):
                         category=self.category,
                         key=name,
                         current_value=value,
+                        default_value=None,
+                        change_type=ChangeType.MODIFIED,
                         source_type=SourceType.REGISTRY,
                         source_path=f"HKLM\\{self.REGISTRY_PATH}\\{name}",
                     )

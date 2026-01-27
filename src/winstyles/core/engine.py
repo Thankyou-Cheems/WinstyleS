@@ -61,8 +61,10 @@ class StyleEngine:
                     print(f"Scanner {scanner.name} failed: {e}")
 
         return ScanResult(
+            os_version="",
             items=items,
             summary=self._generate_summary(items),
+            duration_ms=None,
         )
 
     def _generate_summary(self, items: list[ScannedItem]) -> dict[str, int]:

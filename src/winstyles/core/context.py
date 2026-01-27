@@ -5,7 +5,7 @@ AppContext - 运行时上下文，管理全局配置和服务
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
 
 
 @dataclass
@@ -39,7 +39,10 @@ class AppContext:
     - 共享服务
     """
 
-    _instance: Optional["AppContext"] = None
+    _instance: ClassVar[Optional["AppContext"]] = None
+    _initialized: bool
+    _config: AppConfig
+    _logger: logging.Logger
 
     def __new__(cls, config: AppConfig | None = None) -> "AppContext":
         if cls._instance is None:

@@ -5,6 +5,7 @@
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
+from typing import Optional
 
 # 还原点类型
 APPLICATION_INSTALL = 0
@@ -48,7 +49,7 @@ class RestorePointManager:
     """
 
     def __init__(self) -> None:
-        self._srclient = None
+        self._srclient: Optional[ctypes.WinDLL] = None
         self._load_library()
 
     def _load_library(self) -> None:
@@ -80,6 +81,7 @@ class RestorePointManager:
         """
         if not self.is_available:
             return False, 0
+        assert self._srclient is not None
 
         if description is None:
             description = f"WinstyleS Backup - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -103,7 +105,7 @@ class RestorePointManager:
                 ctypes.byref(status),
             )
 
-            if not result:
+            if int(result) == 0:
                 return False, 0
 
             # 结束还原点创建
@@ -115,7 +117,7 @@ class RestorePointManager:
                 ctypes.byref(status),
             )
 
-            return result != 0, status.llSequenceNumber
+            return int(result) != 0, status.llSequenceNumber
 
         except Exception:
             return False, 0
@@ -132,6 +134,7 @@ class RestorePointManager:
         """
         if not self.is_available:
             return False
+        assert self._srclient is not None
 
         try:
             restore_info = RESTOREPOINTINFO()
@@ -146,7 +149,7 @@ class RestorePointManager:
                 ctypes.byref(status),
             )
 
-            return result != 0
+            return int(result) != 0
 
         except Exception:
             return False

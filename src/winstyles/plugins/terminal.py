@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from winstyles.domain.models import AssociatedFile, ScannedItem
-from winstyles.domain.types import AssetType, SourceType
+from winstyles.domain.types import AssetType, ChangeType, SourceType
 from winstyles.plugins.base import BaseScanner
 
 
@@ -83,6 +83,8 @@ class WindowsTerminalScanner(BaseScanner):
                             category=self.category,
                             key=f"windowsTerminal.{key}",
                             current_value=value,
+                            default_value=None,
+                            change_type=ChangeType.MODIFIED,
                             source_type=SourceType.FILE,
                             source_path=str(settings_path),
                         )
@@ -96,6 +98,8 @@ class WindowsTerminalScanner(BaseScanner):
                         category=self.category,
                         key=f"windowsTerminal.defaults.{key}",
                         current_value=value,
+                        default_value=None,
+                        change_type=ChangeType.MODIFIED,
                         source_type=SourceType.FILE,
                         source_path=str(settings_path),
                     )
@@ -162,6 +166,8 @@ class PowerShellProfileScanner(BaseScanner):
                         category=self.category,
                         key=f"powershell.profile.{profile_path.parent.name}",
                         current_value=content,
+                        default_value=None,
+                        change_type=ChangeType.MODIFIED,
                         source_type=SourceType.FILE,
                         source_path=str(profile_path),
                         associated_files=[
@@ -170,6 +176,8 @@ class PowerShellProfileScanner(BaseScanner):
                                 name=profile_path.name,
                                 path=str(profile_path),
                                 exists=True,
+                                size_bytes=None,
+                                sha256=None,
                             )
                         ],
                     )
