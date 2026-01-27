@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WinstyleS</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar glass">
+        <div class="brand">
+          <div class="brand-title">WinstyleS</div>
+          <div class="brand-sub">Windows Style Sync</div>
+        </div>
+        <nav class="nav">
+          <button class="nav-item active" data-page="scan">
+            <span>扫描</span>
+          </button>
+          <button class="nav-item" data-page="export">
+            <span>导出</span>
+          </button>
+          <button class="nav-item" data-page="import">
+            <span>导入</span>
+          </button>
+          <button class="nav-item" data-page="inspect">
+            <span>检视</span>
+          </button>
+          <button class="nav-item" data-page="diff">
+            <span>对比</span>
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="status-dot"></div>
+          <span id="statusText">就绪</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="header glass">
+          <div>
+            <div class="header-title" id="pageTitle">扫描</div>
+            <div class="header-sub" id="pageDesc">扫描系统个性化配置并生成报告</div>
+          </div>
+          <div class="header-actions">
+            <button class="ghost" id="openFolder">打开输出目录</button>
+          </div>
+        </section>
+
+        <section class="panel glass page active" id="page-scan">
+          <div class="panel-header">
+            <div>
+              <h2>快速扫描</h2>
+              <p>扫描字体与终端配置，生成差异报告。</p>
+            </div>
+            <div class="panel-actions">
+              <button class="primary" id="scanBtn">开始扫描</button>
+              <label class="toggle">
+                <input type="checkbox" id="scanModifiedOnly" />
+                <span>仅显示修改项</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>类别</label>
+              <div class="chips">
+                <label class="chip"><input type="checkbox" value="fonts" checked />字体</label>
+                <label class="chip"><input type="checkbox" value="terminal" checked />终端</label>
+                <label class="chip"><input type="checkbox" value="theme" />主题</label>
+                <label class="chip"><input type="checkbox" value="vscode" />VS Code</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>格式</label>
+              <select id="scanFormat">
+                <option value="table">Table</option>
+                <option value="json">JSON</option>
+                <option value="yaml">YAML</option>
+              </select>
+            </div>
+          </div>
+          <div class="output">
+            <div class="output-title">输出</div>
+            <pre id="scanOutput">扫描结果将在此显示...</pre>
+          </div>
+        </section>
+
+        <section class="panel glass page" id="page-export">
+          <div class="panel-header">
+            <div>
+              <h2>导出配置包</h2>
+              <p>导出 scan.json 与 manifest.json，支持 zip 包。</p>
+            </div>
+            <div class="panel-actions">
+              <button class="primary" id="exportBtn">立即导出</button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>输出路径</label>
+              <input id="exportPath" placeholder="例如 C:\\Temp\\winstyles-export.zip" />
+            </div>
+            <div class="field">
+              <label>类别</label>
+              <input id="exportCategories" placeholder="fonts,terminal" />
+            </div>
+            <div class="field">
+              <label class="toggle">
+                <input type="checkbox" id="exportIncludeDefaults" />
+                <span>包含默认项</span>
+              </label>
+            </div>
+          </div>
+          <div class="output">
+            <div class="output-title">输出</div>
+            <pre id="exportOutput">等待导出...</pre>
+          </div>
+        </section>
+
+        <section class="panel glass page" id="page-import">
+          <div class="panel-header">
+            <div>
+              <h2>导入配置包</h2>
+              <p>支持 dry-run 预览更改。</p>
+            </div>
+            <div class="panel-actions">
+              <button class="primary" id="importBtn">开始导入</button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>包路径</label>
+              <input id="importPath" placeholder="例如 C:\\Temp\\winstyles-export.zip" />
+            </div>
+            <div class="field">
+              <label class="toggle">
+                <input type="checkbox" id="importDryRun" checked />
+                <span>Dry-run</span>
+              </label>
+            </div>
+            <div class="field">
+              <label class="toggle">
+                <input type="checkbox" id="importSkipRestore" />
+                <span>跳过还原点</span>
+              </label>
+            </div>
+          </div>
+          <div class="output">
+            <div class="output-title">输出</div>
+            <pre id="importOutput">等待导入...</pre>
+          </div>
+        </section>
+
+        <section class="panel glass page" id="page-inspect">
+          <div class="panel-header">
+            <div>
+              <h2>检视配置包</h2>
+              <p>读取 manifest 与 scan 元信息。</p>
+            </div>
+            <div class="panel-actions">
+              <button class="primary" id="inspectBtn">检视</button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>包路径</label>
+              <input id="inspectPath" placeholder="例如 C:\\Temp\\winstyles-export.zip" />
+            </div>
+          </div>
+          <div class="output">
+            <div class="output-title">输出</div>
+            <pre id="inspectOutput">等待检视...</pre>
+          </div>
+        </section>
+
+        <section class="panel glass page" id="page-diff">
+          <div class="panel-header">
+            <div>
+              <h2>对比配置包</h2>
+              <p>比较两个配置包的差异。</p>
+            </div>
+            <div class="panel-actions">
+              <button class="primary" id="diffBtn">对比</button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>包 A</label>
+              <input id="diffPathA" placeholder="C:\\Temp\\A.zip" />
+            </div>
+            <div class="field">
+              <label>包 B</label>
+              <input id="diffPathB" placeholder="C:\\Temp\\B.zip" />
+            </div>
+            <div class="field">
+              <label class="toggle">
+                <input type="checkbox" id="diffShowAll" />
+                <span>显示未变化项</span>
+              </label>
+            </div>
+          </div>
+          <div class="output">
+            <div class="output-title">输出</div>
+            <pre id="diffOutput">等待对比...</pre>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

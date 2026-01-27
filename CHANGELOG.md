@@ -11,6 +11,7 @@
 - 导出/导入 MVP：生成配置包并支持 dry-run 导入
 - diff/inspect：支持配置包对比与检视
 - GUI 重做：扁平现代风格与扫描交互
+- Tauri GUI：前端亚克力风格界面（实验性）
 - 核心数据模型 (ScannedItem, ScanResult, Manifest)
 - 扫描器插件系统
 - 字体扫描器骨架 (FontSubstitutes, FontLink)

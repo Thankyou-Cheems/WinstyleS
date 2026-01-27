@@ -87,3 +87,7 @@ desktop.ini
 
 # Documentation builds
 site/
+
+# Tauri
+src-tauri/target/
+frontend/dist/
