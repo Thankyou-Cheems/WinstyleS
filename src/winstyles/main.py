@@ -109,6 +109,9 @@ def scan(
         console.print(f"[red]不支持的输出格式: {format}[/red]")
         raise typer.Exit(code=1)
 
+    if verbose:
+        _print_scan_summary(result, items)
+
     if output:
         _write_scan_output(result, items, output, format)
         console.print(f"[green]✅ 扫描结果已写入: {output}[/green]")
@@ -305,10 +308,37 @@ def _write_yaml(output_path: Path, payload: dict[str, object]) -> None:
     try:
         import yaml
     except ModuleNotFoundError:
+        console.print("[red]YAML 输出需要安装 PyYAML: pip install pyyaml[/red]")
         raise typer.Exit(code=1)
     output_path.write_text(
         yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8"
     )
+
+
+def _print_scan_summary(result: ScanResult, items: list[ScannedItem]) -> None:
+    console.print(f"[bold]Scan ID:[/bold] {result.scan_id} | [bold]Time:[/bold] {result.scan_time}")
+    if result.os_version:
+        console.print(f"[bold]OS:[/bold] {result.os_version}")
+
+    if result.summary:
+        table = Table(title="Category Summary")
+        table.add_column("Category", style="cyan")
+        table.add_column("Count", style="green")
+        for category, count in sorted(result.summary.items()):
+            table.add_row(category, str(count))
+        console.print(table)
+
+    change_counts: dict[str, int] = {}
+    for item in items:
+        change_counts[item.change_type.value] = change_counts.get(item.change_type.value, 0) + 1
+
+    if change_counts:
+        table = Table(title="Change Summary")
+        table.add_column("Change", style="magenta")
+        table.add_column("Count", style="green")
+        for change, count in sorted(change_counts.items()):
+            table.add_row(change, str(count))
+        console.print(table)
 
 
 if __name__ == "__main__":

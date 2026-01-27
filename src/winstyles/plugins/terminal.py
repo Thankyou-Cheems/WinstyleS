@@ -92,7 +92,7 @@ class WindowsTerminalScanner(BaseScanner):
 
             # 扫描 profiles.defaults
             defaults = settings.get("profiles", {}).get("defaults", {})
-            for key, value in defaults.items():
+            for key, value in self._flatten_profile_defaults(defaults):
                 items.append(
                     ScannedItem(
                         category=self.category,
@@ -114,6 +114,21 @@ class WindowsTerminalScanner(BaseScanner):
         """应用 Windows Terminal 设置"""
         # TODO: 实现设置应用逻辑
         return False
+
+    def _flatten_profile_defaults(
+        self,
+        data: dict[str, object],
+        prefix: str = "",
+    ) -> list[tuple[str, object]]:
+        """展开 profiles.defaults 的嵌套结构为点分键"""
+        flattened: list[tuple[str, object]] = []
+        for key, value in data.items():
+            full_key = f"{prefix}.{key}" if prefix else key
+            if isinstance(value, dict):
+                flattened.extend(self._flatten_profile_defaults(value, full_key))
+            else:
+                flattened.append((full_key, value))
+        return flattened
 
 
 class PowerShellProfileScanner(BaseScanner):

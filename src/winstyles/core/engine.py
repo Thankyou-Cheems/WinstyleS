@@ -30,6 +30,7 @@ class StyleEngine:
     def __init__(self) -> None:
         self._scanners: list[BaseScanner] = []
         self._defaults_db: dict[str, Any] = {}
+        self._defaults_os_version = ""
         self._load_plugins()
         self._load_defaults()
 
@@ -61,6 +62,7 @@ class StyleEngine:
             self._defaults_db = {}
             return
 
+        self._defaults_os_version = str(raw.get("os_version", "")).strip()
         self._defaults_db = self._flatten_defaults(raw)
 
     def _flatten_defaults(self, raw: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -88,10 +90,18 @@ class StyleEngine:
                     "default_profile": "windowsTerminal.defaultProfile",
                     "theme": "windowsTerminal.theme",
                     "use_acrylic": "windowsTerminal.useAcrylicInTabRow",
+                    "font_face": "windowsTerminal.defaults.font.face",
+                    "font_size": "windowsTerminal.defaults.font.size",
                 }
                 for src_key, dest_key in key_map.items():
                     if src_key in wt:
                         terminal_defaults[dest_key] = wt[src_key]
+                if "use_acrylic" in wt:
+                    terminal_defaults["windowsTerminal.defaults.useAcrylic"] = wt["use_acrylic"]
+                if "font_face" in wt:
+                    terminal_defaults["windowsTerminal.defaults.fontFace"] = wt["font_face"]
+                if "font_size" in wt:
+                    terminal_defaults["windowsTerminal.defaults.fontSize"] = wt["font_size"]
                 if terminal_defaults:
                     defaults["terminal"] = terminal_defaults
 
@@ -127,7 +137,7 @@ class StyleEngine:
         )
 
         return ScanResult(
-            os_version="",
+            os_version=self._defaults_os_version,
             items=analyzed_items,
             summary=self._generate_summary(analyzed_items),
             duration_ms=None,
