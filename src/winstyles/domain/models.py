@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from pydantic import BaseModel, Field
 
-from wss.domain.types import ChangeType, Category, SourceType, AssetType
+from winstyles.domain.types import ChangeType, Category, SourceType, AssetType
 
 
 class AssociatedFile(BaseModel):

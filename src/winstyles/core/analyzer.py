@@ -4,8 +4,8 @@ DiffAnalyzer - 差异分析器，对比当前配置与默认值
 
 from typing import List, Dict, Any
 
-from wss.domain.models import ScannedItem
-from wss.domain.types import ChangeType
+from winstyles.domain.models import ScannedItem
+from winstyles.domain.types import ChangeType
 
 
 class DiffAnalyzer:

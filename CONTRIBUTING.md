@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你对 WSS 项目的关注！欢迎提交 Issue 和 Pull Request。
+感谢你对 WinStyles 项目的关注！欢迎提交 Issue 和 Pull Request。
 
 ## 🚀 开发环境设置
 
@@ -14,8 +14,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourname/wss.git
-cd wss
+git clone https://github.com/yourname/winstyles.git
+cd winstyles
 
 # 创建虚拟环境 (推荐)
 python -m venv .venv
@@ -25,13 +25,13 @@ python -m venv .venv
 pip install -e ".[dev]"
 
 # 验证安装
-wss --version
+winstyles --version
 ```
 
 ## 📁 项目结构
 
 ```
-src/wss/
+src/winstyles/
 ├── core/           # 核心业务逻辑 (StyleEngine, DiffAnalyzer)
 ├── domain/         # Pydantic 数据模型
 ├── infra/          # 基础设施 (注册表、文件系统、Windows API)
@@ -74,7 +74,7 @@ src/wss/
 pytest
 
 # 运行并显示覆盖率
-pytest --cov=src/wss --cov-report=term-missing
+pytest --cov=src/winstyles --cov-report=term-missing
 
 # 仅运行单元测试
 pytest tests/unit/
@@ -92,7 +92,7 @@ black src/ tests/
 ruff check src/ tests/
 
 # 类型检查
-mypy src/wss
+mypy src/winstyles
 ```
 
 ### 提交前检查清单
@@ -105,13 +105,13 @@ mypy src/wss
 
 ## 🔌 添加新扫描器
 
-1. 在 `src/wss/plugins/` 创建新文件
+1. 在 `src/winstyles/plugins/` 创建新文件
 2. 继承 `BaseScanner` 类
 3. 实现必需方法：`id`, `name`, `category`, `scan()`, `apply()`
 
 ```python
-from wss.plugins.base import BaseScanner
-from wss.domain.models import ScannedItem
+from winstyles.plugins.base import BaseScanner
+from winstyles.domain.models import ScannedItem
 
 class MyScanner(BaseScanner):
     @property

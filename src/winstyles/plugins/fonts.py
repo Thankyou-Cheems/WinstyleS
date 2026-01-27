@@ -9,9 +9,9 @@ FontScanner - 系统字体扫描器
 
 from typing import List, Dict, Any
 
-from wss.plugins.base import BaseScanner
-from wss.domain.models import ScannedItem, AssociatedFile
-from wss.domain.types import SourceType, AssetType
+from winstyles.plugins.base import BaseScanner
+from winstyles.domain.models import ScannedItem, AssociatedFile
+from winstyles.domain.types import SourceType, AssetType
 
 
 class FontSubstitutesScanner(BaseScanner):

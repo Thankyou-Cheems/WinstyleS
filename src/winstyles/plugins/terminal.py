@@ -12,9 +12,9 @@ from pathlib import Path
 import os
 import json
 
-from wss.plugins.base import BaseScanner
-from wss.domain.models import ScannedItem, AssociatedFile
-from wss.domain.types import SourceType, AssetType
+from winstyles.plugins.base import BaseScanner
+from winstyles.domain.models import ScannedItem, AssociatedFile
+from winstyles.domain.types import SourceType, AssetType
 
 
 class WindowsTerminalScanner(BaseScanner):

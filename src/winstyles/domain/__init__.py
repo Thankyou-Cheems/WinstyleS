@@ -2,7 +2,7 @@
 域模型层 - Pydantic 数据模型
 """
 
-from wss.domain.models import (
+from winstyles.domain.models import (
     ScannedItem,
     ScanResult,
     Manifest,
@@ -10,7 +10,7 @@ from wss.domain.models import (
     FontInfo,
     RegistryEntry,
 )
-from wss.domain.types import ChangeType, Category
+from winstyles.domain.types import ChangeType, Category
 
 __all__ = [
     "ScannedItem",

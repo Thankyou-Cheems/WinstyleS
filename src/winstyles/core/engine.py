@@ -5,8 +5,8 @@ StyleEngine - 核心引擎，负责调度扫描器和管理工作流
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
-from wss.domain.models import ScanResult, ScannedItem, Manifest
-from wss.plugins.base import BaseScanner
+from winstyles.domain.models import ScanResult, ScannedItem, Manifest
+from winstyles.plugins.base import BaseScanner
 
 
 class StyleEngine:

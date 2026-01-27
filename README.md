@@ -1,8 +1,8 @@
-# Windows Style Sync (WSS)
+# WinStyles
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/yourname/wss/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/wss/actions)
+[![CI](https://github.com/yourname/winstyles/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/winstyles/actions)
 
 > 🎨 **Windows 个性化设置同步工具** - 自动探测、导出、同步你的 Windows 美化配置
 
@@ -30,40 +30,40 @@
 ### 安装
 
 ```bash
-pip install wss
+pip install winstyles
 ```
 
 ### 基本用法
 
 ```bash
 # 扫描当前系统配置
-wss scan
+winstyles scan
 
 # 仅扫描字体和终端
-wss scan -c fonts -c terminal
+winstyles scan -c fonts -c terminal
 
 # 导出配置包
-wss export ./my-style.zip
+winstyles export ./my-style.zip
 
 # 预览导入（不实际应用）
-wss import ./my-style.zip --dry-run
+winstyles import ./my-style.zip --dry-run
 
 # 导入配置包
-wss import ./my-style.zip
+winstyles import ./my-style.zip
 ```
 
 ### 启动 GUI
 
 ```bash
-python -m wss.gui.app
+python -m winstyles.gui.app
 ```
 
 ## 🛠️ 从源码安装
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourname/wss.git
-cd wss
+git clone https://github.com/yourname/winstyles.git
+cd winstyles
 
 # 安装开发依赖
 pip install -e ".[dev]"

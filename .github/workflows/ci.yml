@@ -33,11 +33,11 @@ jobs:
         run: black --check src/
         
       - name: Type check with mypy
-        run: mypy src/wss
+        run: mypy src/winstyles
         continue-on-error: true
         
       - name: Run tests
-        run: pytest --cov=src/wss --cov-report=xml
+        run: pytest --cov=src/winstyles --cov-report=xml
         
       - name: Upload coverage
         uses: codecov/codecov-action@v3

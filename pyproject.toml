@@ -1,12 +1,12 @@
 [project]
-name = "wss"
+name = "winstyles"
 version = "0.1.0"
 description = "Windows Style Sync - Windows 个性化设置同步工具"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Your Name", email = "you@example.com" }]
-keywords = ["windows", "sync", "style", "personalization", "customization"]
+keywords = ["windows", "sync", "style", "personalization", "customization", "theme"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -43,20 +43,20 @@ docs = [
 ]
 
 [project.scripts]
-wss = "wss.main:app"
+winstyles = "winstyles.main:app"
 
 [project.urls]
-Homepage = "https://github.com/yourname/wss"
-Documentation = "https://yourname.github.io/wss"
-Repository = "https://github.com/yourname/wss"
-Issues = "https://github.com/yourname/wss/issues"
+Homepage = "https://github.com/yourname/winstyles"
+Documentation = "https://yourname.github.io/winstyles"
+Repository = "https://github.com/yourname/winstyles"
+Issues = "https://github.com/yourname/winstyles/issues"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/wss"]
+packages = ["src/winstyles"]
 
 [tool.black]
 line-length = 100
@@ -73,4 +73,4 @@ strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=src/wss --cov-report=term-missing"
+addopts = "-v --cov=src/winstyles --cov-report=term-missing"

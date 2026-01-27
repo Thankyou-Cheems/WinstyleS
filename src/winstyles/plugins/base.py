@@ -8,9 +8,9 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from wss.domain.models import ScannedItem
-    from wss.infra.registry import IRegistryAdapter
-    from wss.infra.filesystem import IFileSystemAdapter
+    from winstyles.domain.models import ScannedItem
+    from winstyles.infra.registry import IRegistryAdapter
+    from winstyles.infra.filesystem import IFileSystemAdapter
 
 
 class BaseScanner(ABC):

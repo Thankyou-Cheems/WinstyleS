@@ -1,4 +1,4 @@
-# WSS 技术设计文档
+# WinStyles 技术设计文档
 
 > 本文档记录项目的详细技术设计，供开发者参考。
 
@@ -16,7 +16,7 @@
 ### 核心功能
 
 ```
-WSS 功能模块
+WinStyles 功能模块
 │
 ├── 🔍 扫描与审计 (Scan & Audit)
 │   ├── 系统外观扫描
@@ -133,31 +133,31 @@ MyStyle_20250127/
 ### 命令总览
 
 ```bash
-wss scan          # 扫描系统配置
-wss export        # 导出配置包
-wss import        # 导入配置包
-wss diff          # 对比两个包
-wss inspect       # 检视包内容
-wss restore       # 回滚
+winstyles scan          # 扫描系统配置
+winstyles export        # 导出配置包
+winstyles import        # 导入配置包
+winstyles diff          # 对比两个包
+winstyles inspect       # 检视包内容
+winstyles restore       # 回滚
 ```
 
 ### 常用示例
 
 ```bash
 # 扫描所有配置
-wss scan
+winstyles scan
 
 # 仅扫描字体和终端，输出 JSON
-wss scan -c fonts -c terminal -f json
+winstyles scan -c fonts -c terminal -f json
 
 # 导出配置包
-wss export ./my-style.zip
+winstyles export ./my-style.zip
 
 # 预览导入（不实际应用）
-wss import ./my-style.zip --dry-run
+winstyles import ./my-style.zip --dry-run
 
 # 导入并跳过还原点
-wss import ./my-style.zip --skip-restore-point
+winstyles import ./my-style.zip --skip-restore-point
 ```
 
 ---

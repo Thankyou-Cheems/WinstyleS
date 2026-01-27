@@ -19,7 +19,7 @@
 - Windows 11 23H2 默认值基准库
 
 ### Changed
-- N/A
+- 项目重命名: `wss` → `winstyles`
 
 ### Fixed
 - N/A

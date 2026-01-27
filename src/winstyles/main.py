@@ -11,8 +11,8 @@ from wss import __version__
 
 # 创建 Typer 应用
 app = typer.Typer(
-    name="wss",
-    help="Windows Style Sync - Windows 个性化设置同步工具",
+    name="winstyles",
+    help="WinStyles - Windows 个性化设置同步工具",
     add_completion=True,
     rich_markup_mode="rich",
 )
@@ -23,7 +23,7 @@ console = Console()
 def version_callback(value: bool) -> None:
     """显示版本信息"""
     if value:
-        console.print(f"[bold blue]WSS[/bold blue] version [green]{__version__}[/green]")
+        console.print(f"[bold blue]WinStyles[/bold blue] version [green]{__version__}[/green]")
         raise typer.Exit()
 
 
@@ -39,7 +39,7 @@ def main(
     ),
 ) -> None:
     """
-    Windows Style Sync (WSS) - Windows 个性化设置同步工具
+    WinStyles - Windows 个性化设置同步工具
 
     自动扫描、导出、同步你的 Windows 美化配置。
     """

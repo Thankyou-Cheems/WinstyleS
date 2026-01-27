@@ -5,8 +5,8 @@
 import pytest
 from typing import Generator
 
-from wss.infra.registry import MockRegistryAdapter
-from wss.infra.filesystem import MockFileSystemAdapter
+from winstyles.infra.registry import MockRegistryAdapter
+from winstyles.infra.filesystem import MockFileSystemAdapter
 
 
 @pytest.fixture
