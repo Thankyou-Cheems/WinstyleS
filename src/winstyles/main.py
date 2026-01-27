@@ -7,7 +7,7 @@ from rich.console import Console
 from typing import Optional, List
 from pathlib import Path
 
-from wss import __version__
+from winstyles import __version__
 
 # 创建 Typer 应用
 app = typer.Typer(
