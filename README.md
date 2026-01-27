@@ -81,6 +81,7 @@ black --check src/
 - [贡献指南](CONTRIBUTING.md) - 开发环境设置、架构说明、代码规范
 - [技术设计](docs/design.md) - 详细的功能规格和数据结构
 - [更新日志](CHANGELOG.md) - 版本变更记录
+- [协作约定](AGENTS.md) - 文档同步与发布检查清单
 
 ## 🤝 贡献
 
