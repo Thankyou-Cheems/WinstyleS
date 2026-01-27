@@ -13,6 +13,7 @@
 - GUI 重做：扁平现代风格与扫描交互
 - Tauri GUI：前端亚克力风格界面（实验性）
 - GUI 入口：优先启动 Tauri，失败回退到内置 GUI
+- GUI 入口：检测到预编译 exe 时直接启动
 - 核心数据模型 (ScannedItem, ScanResult, Manifest)
 - 扫描器插件系统
 - 字体扫描器骨架 (FontSubstitutes, FontLink)

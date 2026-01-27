@@ -134,7 +134,7 @@ fn import_config(args: ImportArgs) -> Result<String, String> {
 
 #[tauri::command]
 fn inspect(args: InspectArgs) -> Result<String, String> {
-    let mut cmd = vec![
+    let cmd = vec![
         "-m".to_string(),
         "winstyles".to_string(),
         "inspect".to_string(),
@@ -174,6 +174,7 @@ fn main() {
             inspect,
             diff
         ])
+        .plugin(tauri_plugin_shell::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

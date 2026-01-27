@@ -1,15 +1,13 @@
 {
+  "productName": "WinstyleS",
+  "version": "0.1.0",
+  "identifier": "com.thankyoucheems.winstyles",
   "build": {
-    "beforeDevCommand": "",
-    "beforeBuildCommand": "",
-    "devPath": "../frontend",
-    "distDir": "../frontend"
+    "beforeDevCommand": "python -m http.server 1420 --directory ../frontend",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../frontend"
   },
-  "package": {
-    "productName": "WinstyleS",
-    "version": "0.1.0"
-  },
-  "tauri": {
+  "app": {
     "windows": [
       {
         "title": "WinstyleS",
@@ -18,11 +16,16 @@
         "resizable": true,
         "fullscreen": false
       }
-    ],
-    "allowlist": {
-      "shell": {
-        "open": true
-      }
+    ]
+  },
+  "bundle": {
+    "icon": [
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "shell": {
+      "open": true
     }
   }
 }

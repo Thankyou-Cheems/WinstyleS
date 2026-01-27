@@ -1,4 +1,4 @@
-const { invoke } = window.__TAURI__.tauri;
+const { invoke } = window.__TAURI__.core;
 const { open } = window.__TAURI__.shell;
 
 const pages = document.querySelectorAll(".page");

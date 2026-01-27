@@ -400,6 +400,11 @@ def run_gui() -> None:
     """启动 GUI 应用"""
     project_root = Path(__file__).resolve().parents[3]
     tauri_dir = project_root / "src-tauri"
+    tauri_exe = tauri_dir / "target" / "release" / "winstyles.exe"
+
+    if tauri_exe.exists():
+        subprocess.run([str(tauri_exe)], cwd=tauri_dir, check=False)
+        return
 
     if tauri_dir.exists():
         try:

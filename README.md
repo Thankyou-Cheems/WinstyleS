@@ -59,6 +59,7 @@ python -m winstyles.gui.app
 ```
 
 默认优先启动 Tauri GUI；若未安装 Rust 工具链，将回退到内置 GUI。
+如果已存在 `src-tauri/target/release/winstyles.exe`，会直接启动该可执行文件。
 
 ### Tauri GUI（实验性）
 
