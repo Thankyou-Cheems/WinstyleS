@@ -1,0 +1,86 @@
+{
+  "$comment": "Windows 11 23H2 默认值基准库",
+  "os_version": "Windows 11 23H2",
+  "build": "22631",
+  "last_updated": "2025-01-27",
+  
+  "fonts": {
+    "system_font": "Segoe UI",
+    "monospace_font": "Consolas",
+    "substitutes": {
+      "MS Shell Dlg": "Microsoft Sans Serif",
+      "MS Shell Dlg 2": "Tahoma",
+      "MS Sans Serif": "Microsoft Sans Serif",
+      "Helv": "Microsoft Sans Serif",
+      "Times": "Times New Roman",
+      "Tms Rmn": "Times New Roman"
+    },
+    "font_link": {
+      "Segoe UI": [
+        "SEGOEUI.TTF,Segoe UI",
+        "SEGUISYM.TTF,Segoe UI Symbol"
+      ],
+      "Consolas": [
+        "CONSOLA.TTF,Consolas"
+      ]
+    }
+  },
+  
+  "appearance": {
+    "apps_use_light_theme": 1,
+    "system_uses_light_theme": 1,
+    "enable_transparency": 1,
+    "color_prevalence": 0,
+    "colorization_color": "0xC40078D7",
+    "colorization_color_balance": 89,
+    "accent_color_menu": 0,
+    "accent_palette": "86CAFF00A6D8FF0076B9FF000078D700005A9E000042750000264200F7630C00"
+  },
+  
+  "terminal": {
+    "windows_terminal": {
+      "default_profile": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+      "font_face": "Cascadia Mono",
+      "font_size": 12,
+      "theme": "system",
+      "use_acrylic": true
+    }
+  },
+  
+  "explorer": {
+    "hidden_files_visible": 0,
+    "file_extensions_visible": 0,
+    "full_path_in_title": 0,
+    "show_compact_view": 1,
+    "launch_to": "quick_access"
+  },
+  
+  "taskbar": {
+    "alignment": "center",
+    "show_search": 1,
+    "show_task_view": 1,
+    "show_widgets": 1,
+    "show_chat": 1
+  },
+  
+  "cursor": {
+    "scheme": "(None)",
+    "cursors": {
+      "Arrow": "%SystemRoot%\\cursors\\aero_arrow.cur",
+      "Help": "%SystemRoot%\\cursors\\aero_helpsel.cur",
+      "AppStarting": "%SystemRoot%\\cursors\\aero_working.ani",
+      "Wait": "%SystemRoot%\\cursors\\aero_busy.ani",
+      "Crosshair": "",
+      "IBeam": "",
+      "NWPen": "%SystemRoot%\\cursors\\aero_pen.cur",
+      "No": "%SystemRoot%\\cursors\\aero_unavail.cur",
+      "SizeNS": "%SystemRoot%\\cursors\\aero_ns.cur",
+      "SizeWE": "%SystemRoot%\\cursors\\aero_ew.cur",
+      "SizeNWSE": "%SystemRoot%\\cursors\\aero_nwse.cur",
+      "SizeNESW": "%SystemRoot%\\cursors\\aero_nesw.cur",
+      "SizeAll": "%SystemRoot%\\cursors\\aero_move.cur",
+      "UpArrow": "%SystemRoot%\\cursors\\aero_up.cur",
+      "Hand": "%SystemRoot%\\cursors\\aero_link.cur"
+    }
+  }
+}
