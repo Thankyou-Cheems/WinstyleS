@@ -58,6 +58,8 @@ winstyles import ./my-style.zip
 python -m winstyles.gui.app
 ```
 
+默认优先启动 Tauri GUI；若未安装 Rust 工具链，将回退到内置 GUI。
+
 ### Tauri GUI（实验性）
 
 轻量桌面壳 + 前端界面（亚克力风格）。需要 Rust 工具链与 tauri-cli。

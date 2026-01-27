@@ -4,7 +4,9 @@ WinstyleSApp - 主应用窗口
 
 from __future__ import annotations
 
+import subprocess
 import threading
+from pathlib import Path
 
 import customtkinter as ctk  # type: ignore[import-untyped]
 
@@ -396,6 +398,18 @@ WSSApp = WinstyleSApp
 
 def run_gui() -> None:
     """启动 GUI 应用"""
+    project_root = Path(__file__).resolve().parents[3]
+    tauri_dir = project_root / "src-tauri"
+
+    if tauri_dir.exists():
+        try:
+            subprocess.run(["cargo", "tauri", "dev"], cwd=tauri_dir, check=True)
+            return
+        except FileNotFoundError:
+            print("未找到 cargo，请安装 Rust 工具链后再启动 Tauri GUI。")
+        except subprocess.CalledProcessError:
+            print("Tauri GUI 启动失败，已回退到内置 GUI。")
+
     app = WinstyleSApp()
     app.mainloop()
 
