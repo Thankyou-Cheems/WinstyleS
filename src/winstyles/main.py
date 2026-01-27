@@ -322,9 +322,7 @@ def restore(
                 creationflags=subprocess.CREATE_NEW_CONSOLE,
             )
             console.print("[green]系统还原界面已打开[/green]")
-            console.print(
-                "[dim]请在系统还原界面中选择由 WinstyleS 创建的还原点进行恢复[/dim]"
-            )
+            console.print("[dim]请在系统还原界面中选择由 WinstyleS 创建的还原点进行恢复[/dim]")
         except Exception as e:
             console.print(f"[red]无法打开系统还原: {e}[/red]")
             raise typer.Exit(code=1)
@@ -334,17 +332,13 @@ def restore(
     backup_dir = Path.home() / ".winstyles" / "backups"
     if not backup_dir.exists():
         console.print("[yellow]没有找到备份文件[/yellow]")
-        console.print(
-            "[dim]使用 --system-restore 参数打开系统还原界面[/dim]"
-        )
+        console.print("[dim]使用 --system-restore 参数打开系统还原界面[/dim]")
         return
 
     backups = sorted(backup_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not backups:
         console.print("[yellow]没有找到备份文件[/yellow]")
-        console.print(
-            "[dim]使用 --system-restore 参数打开系统还原界面[/dim]"
-        )
+        console.print("[dim]使用 --system-restore 参数打开系统还原界面[/dim]")
         return
 
     table = Table(title="可用备份")
@@ -357,6 +351,7 @@ def restore(
         stat = backup.stat()
         size_kb = stat.st_size / 1024
         from datetime import datetime
+
         mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
         table.add_row(str(i), backup.name, mtime, f"{size_kb:.1f} KB")
 
@@ -421,6 +416,7 @@ def report(
 
         if open_browser:
             import webbrowser
+
             webbrowser.open(str(output.resolve()))
     else:
         # 默认保存到临时文件并显示
@@ -438,12 +434,12 @@ def report(
                 temp_path = f.name
 
             webbrowser.open(temp_path)
-            console.print(f"[green]报告已在浏览器中打开[/green]")
+            console.print("[green]报告已在浏览器中打开[/green]")
         else:
             # 直接打印 Markdown
             from rich.markdown import Markdown
-            console.print(Markdown(content))
 
+            console.print(Markdown(content))
 
 
 def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:

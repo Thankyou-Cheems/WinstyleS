@@ -20,6 +20,7 @@ from winstyles.domain.models import FontInfo
 @dataclass
 class UpdateInfo:
     """更新信息"""
+
     current_version: str
     latest_version: str
     download_url: str
@@ -31,8 +32,10 @@ class UpdateChecker:
 
     # 远程字体数据库 URL (指向 GitHub Main 分支)
     # 远程字体数据库 URL (使用 JsDelivr CDN 加速)
-    REMOTE_DB_URL = "https://cdn.jsdelivr.net/gh/Thankyou-Cheems/WinstyleS@main/data/opensource_fonts.json"
-    
+    REMOTE_DB_URL = (
+        "https://cdn.jsdelivr.net/gh/Thankyou-Cheems/WinstyleS@main/data/opensource_fonts.json"
+    )
+
     # 社区维护的字体数据库 (Source: braver/programmingfonts)
     COMMUNITY_DB_URL = "https://cdn.jsdelivr.net/gh/braver/programmingfonts@master/fonts.json"
 
@@ -46,21 +49,21 @@ class UpdateChecker:
 
         main_data = self._fetch_json(self.REMOTE_DB_URL)
         community_data = self._fetch_json(self.COMMUNITY_DB_URL)
-        
+
         if not main_data and not community_data:
             return None
-            
+
         result = main_data if main_data else {"fonts": [], "version_differences": {}}
-        
+
         if community_data:
             community_fonts = self._adapt_community_db(community_data)
             # 合并策略：保留 main_data 中的条目 (因为有经过调优的 patterns)，追加新的
             existing_names = {f["name"].lower() for f in result["fonts"]}
-            
+
             for font in community_fonts:
                 if font["name"].lower() not in existing_names:
                     result["fonts"].append(font)
-                    
+
         self._font_db_cache = result
         return result
 
@@ -85,25 +88,29 @@ class UpdateChecker:
                 f"{name}*",
                 f"{name.replace(' ', '')}*",
             ]
-            
-            fonts.append({
-                "name": name,
-                "patterns": patterns,
-                "homepage": website,
-                "download": website, # 假设官网包含下载
-                "license": info.get("license", ""),
-                "description": info.get("description", ""),
-            })
+
+            fonts.append(
+                {
+                    "name": name,
+                    "patterns": patterns,
+                    "homepage": website,
+                    "download": website,  # 假设官网包含下载
+                    "license": info.get("license", ""),
+                    "description": info.get("description", ""),
+                }
+            )
         return fonts
 
-    def check_font_update(self, font_info: FontInfo, current_version: str | None) -> UpdateInfo | None:
+    def check_font_update(
+        self, font_info: FontInfo, current_version: str | None
+    ) -> UpdateInfo | None:
         """
         检查字体更新
-        
+
         Args:
             font_info: 字体信息
             current_version: 当前本地版本字符串 (如 "Version 6.4")
-        
+
         Returns:
             UpdateInfo: 更新信息，如果检查失败返回 None
         """
@@ -134,7 +141,7 @@ class UpdateChecker:
                 current_version=current_version or "Unknown",
                 latest_version=latest_tag,
                 download_url=download_url,
-                has_update=has_update
+                has_update=has_update,
             )
 
         except Exception:

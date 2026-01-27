@@ -142,6 +142,7 @@ class Manifest(BaseModel):
     class Config:
         populate_by_name = True
 
+
 class FontInfo(BaseModel):
     """开源字体信息"""
 

@@ -17,10 +17,10 @@ except ImportError:
 def find_font_path(font_name: str) -> Path | None:
     """
     根据字体名称查找字体文件路径
-    
+
     Args:
         font_name: 字体名称，如 "Consolas" 或 "Maple Mono"
-        
+
     Returns:
         Path: 字体文件绝对路径，如果未找到则返回 None
     """
@@ -78,10 +78,10 @@ def _resolve_font_path(filename: str) -> Path | None:
 def get_font_version(file_path: Path) -> str | None:
     """
     读取字体文件中的版本信息的
-    
+
     Args:
         file_path: 字体文件路径
-        
+
     Returns:
         str: 版本字符串 (如 "Version 1.00"), 失败返回 None
     """
@@ -99,7 +99,7 @@ def get_font_version(file_path: Path) -> str | None:
                 text = record.toUnicode()
                 # 优先取 PlatformID=3 (Windows) 的记录
                 if record.platformID == 3:
-                     return text
+                    return text
                 version = text
 
         return version
