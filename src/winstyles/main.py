@@ -1,5 +1,5 @@
 """
-WSS CLI 主入口 - 使用 Typer 构建命令行界面
+WinstyleS CLI 主入口 - 使用 Typer 构建命令行界面
 """
 
 import typer
@@ -12,7 +12,7 @@ from winstyles import __version__
 # 创建 Typer 应用
 app = typer.Typer(
     name="winstyles",
-    help="WinstyleS - Windows 个性化设置同步工具",
+    help="WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具",
     add_completion=True,
     rich_markup_mode="rich",
 )
@@ -39,7 +39,7 @@ def main(
     ),
 ) -> None:
     """
-    WinstyleS - Windows 个性化设置同步工具
+    WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具
 
     自动扫描、导出、同步你的 Windows 美化配置。
     """
@@ -173,7 +173,7 @@ def restore() -> None:
     """
     ⏪ 回滚到之前的状态
 
-    使用 WSS 创建的备份进行恢复。
+    使用 WinstyleS 创建的备份进行恢复。
     """
     console.print("[bold blue]⏪ 准备回滚...[/bold blue]")
     # TODO: 实现回滚逻辑

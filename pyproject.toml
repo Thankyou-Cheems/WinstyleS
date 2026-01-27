@@ -1,7 +1,7 @@
 [project]
 name = "winstyles"
 version = "0.1.0"
-description = "Windows Style Sync - Windows 个性化设置同步工具"
+description = "WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -46,10 +46,10 @@ docs = [
 winstyles = "winstyles.main:app"
 
 [project.urls]
-Homepage = "https://github.com/yourname/winstyles"
-Documentation = "https://yourname.github.io/winstyles"
-Repository = "https://github.com/yourname/winstyles"
-Issues = "https://github.com/yourname/winstyles/issues"
+Homepage = "https://github.com/Thankyou-Cheems/WinstyleS"
+Documentation = "https://thankyou-cheems.github.io/WinstyleS"
+Repository = "https://github.com/Thankyou-Cheems/WinstyleS"
+Issues = "https://github.com/Thankyou-Cheems/WinstyleS/issues"
 
 [build-system]
 requires = ["hatchling"]

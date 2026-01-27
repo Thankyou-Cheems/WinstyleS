@@ -1,14 +1,14 @@
 """
-WSSApp - 主应用窗口
+WinstyleSApp - 主应用窗口
 """
 
 import customtkinter as ctk
 from typing import Optional
 
 
-class WSSApp(ctk.CTk):
+class WinstyleSApp(ctk.CTk):
     """
-    WSS 主应用窗口
+    WinstyleS 主应用窗口
     
     使用 CustomTkinter 构建现代化的 GUI 界面。
     """
@@ -37,7 +37,7 @@ class WSSApp(ctk.CTk):
         # Logo/标题
         self.logo_label = ctk.CTkLabel(
             self.sidebar,
-            text="🎨 WSS",
+            text="🎨 WinstyleS",
             font=ctk.CTkFont(size=24, weight="bold"),
         )
         
@@ -140,9 +140,13 @@ class WSSApp(ctk.CTk):
         self.status_label.configure(text=message)
 
 
+# 兼容旧名称
+WSSApp = WinstyleSApp
+
+
 def run_gui() -> None:
     """启动 GUI 应用"""
-    app = WSSApp()
+    app = WinstyleSApp()
     app.mainloop()
 
 

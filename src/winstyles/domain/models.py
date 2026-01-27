@@ -149,7 +149,7 @@ class Manifest(BaseModel):
     created_at: datetime = Field(
         default_factory=datetime.now, description="创建时间"
     )
-    created_by: str = Field("WSS", description="创建工具")
+    created_by: str = Field("WinstyleS", description="创建工具")
     
     source_system: SourceSystem = Field(..., description="来源系统信息")
     export_options: ExportOptions = Field(

@@ -82,7 +82,7 @@ class RestorePointManager:
             return False, 0
         
         if description is None:
-            description = f"WSS Backup - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            description = f"WinstyleS Backup - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         
         # 确保描述不超过 256 字符
         if len(description) > 255:

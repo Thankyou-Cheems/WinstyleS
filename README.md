@@ -2,9 +2,9 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/yourname/winstyles/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/winstyles/actions)
+[![CI](https://github.com/Thankyou-Cheems/WinstyleS/actions/workflows/ci.yml/badge.svg)](https://github.com/Thankyou-Cheems/WinstyleS/actions)
 
-> 🎨 **Windows 个性化设置同步工具** - 自动探测、导出、同步你的 Windows 美化配置
+> 🎨 **WinstyleS (Windows Style Sync)** - 自动探测、导出、同步你的 Windows 美化配置
 
 ## ✨ 功能特性
 
@@ -62,8 +62,8 @@ python -m winstyles.gui.app
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourname/winstyles.git
-cd winstyles
+git clone https://github.com/Thankyou-Cheems/WinstyleS.git
+cd WinstyleS
 
 # 安装开发依赖
 pip install -e ".[dev]"

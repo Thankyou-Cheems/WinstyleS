@@ -14,8 +14,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourname/winstyles.git
-cd winstyles
+git clone https://github.com/Thankyou-Cheems/WinstyleS.git
+cd WinstyleS
 
 # 创建虚拟环境 (推荐)
 python -m venv .venv

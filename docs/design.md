@@ -1,5 +1,7 @@
 # WinstyleS 技术设计文档
 
+WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具
+
 > 本文档记录项目的详细技术设计，供开发者参考。
 
 ## 目录

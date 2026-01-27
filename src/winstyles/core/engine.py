@@ -11,7 +11,7 @@ from winstyles.plugins.base import BaseScanner
 
 class StyleEngine:
     """
-    WSS 核心引擎 - 编排者模式
+    WinstyleS 核心引擎 - 编排者模式
     
     负责:
     - 加载和管理扫描器插件
