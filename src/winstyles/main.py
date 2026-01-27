@@ -23,7 +23,10 @@ console = Console()
 def version_callback(value: bool) -> None:
     """显示版本信息"""
     if value:
-        console.print(f"[bold blue]WinstyleS[/bold blue] version [green]{__version__}[/green]")
+        console.print(
+            f"[bold blue]WinstyleS (Windows Style Sync)[/bold blue] version "
+            f"[green]{__version__}[/green]"
+        )
         raise typer.Exit()
 
 
