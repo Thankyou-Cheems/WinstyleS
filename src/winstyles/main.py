@@ -3,6 +3,7 @@ WinstyleS CLI 主入口 - 使用 Typer 构建命令行界面
 """
 
 import json
+import os
 from pathlib import Path
 
 import typer
@@ -90,7 +91,8 @@ def scan(
 
     与 Windows 默认值对比后输出报告。
     """
-    console.print("[bold blue]开始扫描系统配置...[/bold blue]")
+    if format != "json":
+        console.print("[bold blue]开始扫描系统配置...[/bold blue]")
 
     normalized_categories: list[str] | None = None
     if category:
@@ -116,6 +118,10 @@ def scan(
         _write_scan_output(result, items, output, format)
         console.print(f"[green]扫描结果已写入: {output}[/green]")
         return
+
+    if format == "json" and not verbose:
+         _print_scan_output(result, items, format)
+         return
 
     _print_scan_output(result, items, format)
 
@@ -396,7 +402,9 @@ def report(
     """
     from winstyles.core.report import ReportGenerator
 
-    console.print("[bold blue]正在扫描并生成报告...[/bold blue]")
+    is_web_request = os.environ.get("WINSTYLES_WEB_MODE") == "1"
+    if not is_web_request:
+        console.print("[bold blue]正在扫描并生成报告...[/bold blue]")
 
     engine = StyleEngine()
     scan_result = engine.scan_all(categories)
@@ -404,21 +412,34 @@ def report(
     generator = ReportGenerator(scan_result)
 
     if format.lower() == "html":
-        content = generator.generate_html()
+        content = generator.generate_html(embedded=is_web_request)
         default_ext = ".html"
     else:
         content = generator.generate_markdown()
         default_ext = ".md"
 
+
+
     if output:
         output.write_text(content, encoding="utf-8")
-        console.print(f"[green]报告已保存至: {output}[/green]")
+        if not is_web_request:
+             console.print(f"[green]报告已保存至: {output}[/green]")
 
         if open_browser:
             import webbrowser
 
             webbrowser.open(str(output.resolve()))
     else:
+        # If running in web mode (detected or just by lack of output path in some context)
+        # For simplicity, if no output is specified and we want text output, just print it.
+        # But wait, original logic was to use temp file if open_browser.
+        
+        if not open_browser:
+            # Assume stdout output desired (e.g. for Web UI)
+            # Use json dump to be safe with newlines or just print
+            print(json.dumps(content, ensure_ascii=False))
+            return
+
         # 默认保存到临时文件并显示
         if open_browser:
             import tempfile
@@ -432,6 +453,9 @@ def report(
             ) as f:
                 f.write(content)
                 temp_path = f.name
+            
+            console.print(f"[green]报告临时文件: {temp_path}[/green]")
+            webbrowser.open(temp_path)
 
             webbrowser.open(temp_path)
             console.print("[green]报告已在浏览器中打开[/green]")
@@ -442,9 +466,24 @@ def report(
             console.print(Markdown(content))
 
 
+@app.command()
+def gui() -> None:
+    """
+    🖥️ 启动 Web 图形用户界面
+
+    启动本地 Web 服务器并在浏览器中打开操作界面。
+    """
+    from winstyles.gui.app import run_gui
+
+    console.print("[bold blue]正在启动图形界面...[/bold blue]")
+    run_gui()
+
+
 def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:
     if fmt == "json":
-        console.print_json(data=_scan_result_payload(result, items))
+        import json
+        # Direct print for pipes
+        print(json.dumps(_scan_result_payload(result, items), ensure_ascii=False))
         return
     if fmt == "yaml":
         _print_yaml(_scan_result_payload(result, items))
@@ -590,7 +629,8 @@ def _filter_scan_result(result: ScanResult, keep_defaults: bool) -> ScanResult:
 
 def _print_diff_output(payload: dict[str, object], fmt: str) -> None:
     if fmt == "json":
-        console.print_json(data=payload)
+        import json
+        print(json.dumps(payload, ensure_ascii=False))
         return
     if fmt == "yaml":
         _print_yaml(payload)
@@ -617,7 +657,8 @@ def _print_diff_output(payload: dict[str, object], fmt: str) -> None:
 
 def _print_inspect_output(payload: dict[str, object], fmt: str) -> None:
     if fmt == "json":
-        console.print_json(data=payload)
+        import json
+        print(json.dumps(payload, ensure_ascii=False))
         return
     if fmt == "yaml":
         _print_yaml(payload)

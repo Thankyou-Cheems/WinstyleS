@@ -56,24 +56,13 @@ winstyles import ./my-style.zip --dry-run
 winstyles import ./my-style.zip
 ```
 
-### 启动 GUI
-
+### 启动 Web GUI
 ```bash
-python -m winstyles.gui.app
+python -m winstyles gui
 ```
 
-默认优先启动 Tauri GUI；若未安装 Rust 工具链，将回退到内置 GUI。
-如果已存在 `src-tauri/target/release/winstyles.exe`，会直接启动该可执行文件。
-
-### Tauri GUI（实验性）
-
-轻量桌面壳 + 前端界面（亚克力风格）。需要 Rust 工具链与 tauri-cli。
-
-```bash
-cd src-tauri
-cargo install tauri-cli
-cargo tauri dev
-```
+这将自动启动简单的本地 Web 服务器并在默认浏览器中打开用户界面。
+界面支持扫描、报告生成、导出导入等所有核心功能。
 
 ## 🛠️ 从源码安装
 

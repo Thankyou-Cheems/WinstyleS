@@ -1,0 +1,137 @@
+name: Build and Release
+
+on:
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (e.g., v0.1.0)'
+        required: false
+        default: ''
+  
+  # 推送 tag 时触发
+  push:
+    tags:
+      - 'v*.*.*'
+  
+  # PR 时只构建不发布（测试构建是否成功）
+  pull_request:
+    branches: [main]
+
+# 权限配置
+permissions:
+  contents: write  # 需要写权限来创建 release
+  packages: read
+
+jobs:
+  build:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -e .
+      
+      - name: Build executable
+        run: |
+          pyinstaller --clean winstyles.spec
+      
+      - name: Verify build output
+        run: |
+          if (Test-Path "dist/WinstyleS.exe") {
+            Write-Host "✓ Build successful: dist/WinstyleS.exe"
+            Get-Item "dist/WinstyleS.exe" | Select-Object Name, Length, LastWriteTime
+          } else {
+            Write-Host "✗ Build failed: executable not found"
+            exit 1
+          }
+      
+      - name: Create ZIP archive
+        run: |
+          Compress-Archive -Path "dist/WinstyleS.exe" -DestinationPath "dist/WinstyleS-Windows-x64.zip"
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinstyleS-Windows-x64
+          path: dist/WinstyleS.exe
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    # 只在 tag 推送或手动触发时创建 release
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinstyleS-Windows-x64
+          path: dist
+      
+      - name: Create ZIP for release
+        run: |
+          cd dist
+          zip WinstyleS-Windows-x64.zip WinstyleS.exe
+      
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.release_version }}" ]; then
+            echo "version=${{ github.event.inputs.release_version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: WinstyleS ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          generate_release_notes: true
+          files: |
+            dist/WinstyleS-Windows-x64.zip
+          body: |
+            ## 🎉 WinstyleS ${{ steps.version.outputs.version }}
+            
+            Windows Style Sync - 自动扫描、导出、同步你的 Windows 美化配置。
+            
+            ### 📦 下载
+            
+            | 平台 | 下载 |
+            |------|------|
+            | Windows x64 | [WinstyleS-Windows-x64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/WinstyleS-Windows-x64.zip) |
+            
+            ### 🚀 使用方法
+            
+            1. 下载并解压 ZIP 文件
+            2. 双击 `WinstyleS.exe` 运行
+            3. 浏览器会自动打开 Web 界面
+            
+            ### ⚠️ 注意事项
+            
+            - 首次运行可能被 Windows Defender 拦截，请选择"仍要运行"
+            - 应用需要管理员权限来读取某些系统配置
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,8 +4,8 @@ WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具
 
 ## GUI 方案
 
-- 轻量前端 + Tauri 容器（亚克力风格，作为默认 GUI 入口）
-- 内置 CustomTkinter GUI 作为降级方案
+- Web GUI (本地服务器 + 浏览器前端，默认入口)
+- 内置 CustomTkinter GUI (可选)
 
 > 本文档记录项目的详细技术设计，供开发者参考。
 

@@ -2,6 +2,36 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/)。
 
+## [0.3.0] - 2026-01-27
+
+### Added
+- **字体更新检查功能**:
+  - 新增「字体更新」页面，检查已安装开源字体的最新版本
+  - 集成 `UpdateChecker` 模块，支持从 GitHub Releases 获取版本信息
+  - 一键打开下载页面，方便用户更新字体
+  - 整合 braver/programmingfonts 社区字体数据库
+- **报告增强**:
+  - 新增「浏览器打开」按钮，支持生成 HTML 报告并在默认浏览器中打开
+  - 报告中显示字体版本信息和更新状态
+- **前端 UI 重新设计**:
+  - 采用微软 Fluent Design System 亚克力风格
+  - 新增 SVG 图标，提升视觉效果
+  - 优化暗色模式支持
+  - 新增加载状态和动画效果
+  - 新增键盘快捷键支持（Ctrl+1-6 快速切换页面）
+- **CustomTkinter GUI 增强**:
+  - 新增「字体更新」页面
+  - 新增「浏览器打开报告」功能
+  - 优化导航和状态栏样式
+
+### Changed
+- 前端导航新增「报告」和「字体更新」入口
+- CustomTkinter GUI 导航新增「字体更新」入口
+- 统一采用 Windows 11 Fluent Design 调色板
+
+### Fixed
+- 修复 GUI 中缺失报告和字体更新功能入口的问题
+
 ## [0.2.0] - 2026-01-27
 
 ### Added

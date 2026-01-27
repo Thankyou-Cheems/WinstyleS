@@ -1,213 +1,844 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WinstyleS</title>
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body>
-    <div class="app">
-      <aside class="sidebar glass">
-        <div class="brand">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="WinstyleS - Windows 个性化设置同步工具，扫描、导出、同步你的 Windows 美化配置" />
+  <title>WinstyleS - Windows Style Sync</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="app">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5.5L10.5 4.25V11.25H3V5.5Z" fill="currentColor" />
+            <path d="M3 12.75H10.5V19.75L3 18.5V12.75Z" fill="currentColor" />
+            <path d="M11.5 4.1L21 2.5V11.25H11.5V4.1Z" fill="currentColor" />
+            <path d="M11.5 12.75H21V21.5L11.5 19.9V12.75Z" fill="currentColor" />
+          </svg>
+        </div>
+        <div class="brand-text">
           <div class="brand-title">WinstyleS</div>
           <div class="brand-sub">Windows Style Sync</div>
         </div>
-        <nav class="nav">
-          <button class="nav-item active" data-page="scan">
-            <span>扫描</span>
-          </button>
-          <button class="nav-item" data-page="export">
-            <span>导出</span>
-          </button>
-          <button class="nav-item" data-page="import">
-            <span>导入</span>
-          </button>
-          <button class="nav-item" data-page="inspect">
-            <span>检视</span>
-          </button>
-          <button class="nav-item" data-page="diff">
-            <span>对比</span>
-          </button>
-        </nav>
-        <div class="sidebar-footer">
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-page="scan" id="nav-scan">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <span>扫描</span>
+        </button>
+        <button class="nav-item" data-page="report" id="nav-report">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          <span>报告</span>
+        </button>
+        <button class="nav-item" data-page="updates" id="nav-updates">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>字体更新</span>
+        </button>
+        <div class="nav-divider"></div>
+        <button class="nav-item" data-page="export" id="nav-export">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span>导出</span>
+        </button>
+        <button class="nav-item" data-page="import" id="nav-import">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>导入</span>
+        </button>
+        <button class="nav-item" data-page="settings" id="nav-settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span>设置</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
           <div class="status-dot"></div>
           <span id="statusText">就绪</span>
         </div>
-      </aside>
+        <div class="version-info">v0.1.0</div>
+      </div>
+    </aside>
 
-      <main class="main">
-        <section class="header glass">
-          <div>
-            <div class="header-title" id="pageTitle">扫描</div>
-            <div class="header-sub" id="pageDesc">扫描系统个性化配置并生成报告</div>
-          </div>
-          <div class="header-actions">
-            <button class="ghost" id="openFolder">打开输出目录</button>
-          </div>
-        </section>
+    <!-- Main Content Area -->
+    <main class="main">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <h1 class="header-title" id="pageTitle">扫描</h1>
+          <p class="header-desc" id="pageDesc">扫描系统个性化配置并生成差异数据</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-ghost" id="openFolder">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            输出目录
+          </button>
+        </div>
+      </header>
 
-        <section class="panel glass page active" id="page-scan">
-          <div class="panel-header">
-            <div>
-              <h2>快速扫描</h2>
-              <p>扫描字体与终端配置，生成差异报告。</p>
+      <!-- Page: Scan -->
+      <section class="page active" id="page-scan">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">快速扫描</h2>
+              <p class="card-desc">扫描字体与终端配置，生成差异报告</p>
             </div>
-            <div class="panel-actions">
-              <button class="primary" id="scanBtn">开始扫描</button>
-              <label class="toggle">
-                <input type="checkbox" id="scanModifiedOnly" />
-                <span>仅显示修改项</span>
-              </label>
+            <div class="card-actions">
+              <button class="btn-primary" id="scanBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                开始扫描
+              </button>
             </div>
           </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>类别</label>
-              <div class="chips">
-                <label class="chip"><input type="checkbox" value="fonts" checked />字体</label>
-                <label class="chip"><input type="checkbox" value="terminal" checked />终端</label>
-                <label class="chip"><input type="checkbox" value="theme" />主题</label>
-                <label class="chip"><input type="checkbox" value="vscode" />VS Code</label>
+
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">扫描类别</label>
+                <div class="chip-group" id="scanCategories">
+                  <label class="chip selected">
+                    <input type="checkbox" value="fonts" checked />
+                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="4 7 4 4 20 4 20 7" />
+                      <line x1="9" y1="20" x2="15" y2="20" />
+                      <line x1="12" y1="4" x2="12" y2="20" />
+                    </svg>
+                    字体
+                  </label>
+                  <label class="chip selected">
+                    <input type="checkbox" value="terminal" checked />
+                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="4 17 10 11 4 5" />
+                      <line x1="12" y1="19" x2="20" y2="19" />
+                    </svg>
+                    终端
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" value="theme" />
+                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="13.5" cy="6.5" r="2.5" />
+                      <path d="M17.5 3.5L11 10l-3.5 3.5L4 10" />
+                    </svg>
+                    主题
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" value="vscode" />
+                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M16 3l5 3v12l-5 3-9-7.5v-1L3 9.5 16 3z" />
+                    </svg>
+                    VS Code
+                  </label>
+                </div>
+              </div>
+              <div class="form-group form-group-small">
+                <label class="form-label">输出格式</label>
+                <select class="form-select" id="scanFormat">
+                  <option value="table">Table</option>
+                  <option value="json">JSON</option>
+                  <option value="yaml">YAML</option>
+                </select>
               </div>
             </div>
-            <div class="field">
-              <label>格式</label>
-              <select id="scanFormat">
-                <option value="table">Table</option>
-                <option value="json">JSON</option>
-                <option value="yaml">YAML</option>
+            <div class="form-row">
+              <label class="toggle-switch">
+                <input type="checkbox" id="scanModifiedOnly" />
+                <span class="toggle-track"></span>
+                <span class="toggle-label">仅显示修改项</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-output">
+          <div class="output-header">
+            <span class="output-title">输出</span>
+            <button class="btn-icon-only" id="copyOutput" title="复制">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+          </div>
+          <div class="results-container" id="scanResults">
+            <div class="empty-state">
+              <p class="empty-title">准备就绪</p>
+              <p class="empty-desc">点击上方「开始扫描」查看系统配置</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Report -->
+      <section class="page" id="page-report">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">系统分析报告</h2>
+              <p class="card-desc">智能分析配置变更，识别开源字体，生成可读性高的报告</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn-primary" id="generateReportBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                生成报告
+              </button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-row">
+              <label class="toggle-switch">
+                <input type="checkbox" id="checkFontUpdates" checked />
+                <span class="toggle-track"></span>
+                <span class="toggle-label">检查字体更新</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-output" style="background: transparent; border: none; padding: 0; box-shadow: none;">
+          <div id="reportOutput" class="report-container" style="min-height: 200px; display: none;"></div>
+          <div id="reportPlaceholder" class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <path d="M16 13H8" />
+              <path d="M16 17H8" />
+              <path d="M10 9H8" />
+            </svg>
+            <p class="empty-title">尚未生成报告</p>
+            <p class="empty-desc">点击「生成报告」开始分析系统配置</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Font Updates -->
+      <section class="page" id="page-updates">
+        <!-- 功能介绍卡片组 -->
+        <div class="feature-cards-row">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </div>
+            <div class="feature-info">
+              <span class="feature-title">自动检测</span>
+              <span class="feature-desc">扫描系统中已安装的开源字体</span>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <div class="feature-info">
+              <span class="feature-title">版本比对</span>
+              <span class="feature-desc">与远程数据库比对最新版本</span>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </div>
+            <div class="feature-info">
+              <span class="feature-title">一键更新</span>
+              <span class="feature-desc">快速下载获取最新版字体</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">字体更新检查</h2>
+              <p class="card-desc">支持 Nerd Fonts, JetBrains Mono, Fira Code 等主流编程字体</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn-secondary" id="refreshFontDbBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                  <path d="M21 21v-5h-5" />
+                </svg>
+                刷新数据库
+              </button>
+              <button class="btn-primary" id="checkUpdatesBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+                检查更新
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="updatesList">
+          <div class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polyline points="4 7 4 4 20 4 20 7" />
+              <line x1="9" y1="20" x2="15" y2="20" />
+              <line x1="12" y1="4" x2="12" y2="20" />
+            </svg>
+            <p class="empty-title">尚未检查字体更新</p>
+            <p class="empty-desc">点击「检查更新」扫描已安装的开源字体</p>
+            <div class="supported-fonts-hint">
+              <p style="font-size: 12px; color: var(--text-tertiary); margin-top: 16px;">支持的字体包括：</p>
+              <div class="font-logos"
+                style="display: flex; gap: 12px; margin-top: 8px; justify-content: center; flex-wrap: wrap;">
+                <span class="font-tag">JetBrains Mono</span>
+                <span class="font-tag">Fira Code</span>
+                <span class="font-tag">Cascadia Code</span>
+                <span class="font-tag">Source Code Pro</span>
+                <span class="font-tag">Nerd Fonts</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Export -->
+      <section class="page" id="page-export">
+        <!-- 导出预设卡片 -->
+        <div class="preset-cards-row">
+          <div class="preset-card" data-preset="full">
+            <div class="preset-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+            </div>
+            <span class="preset-title">完整备份</span>
+            <span class="preset-desc">导出所有配置</span>
+          </div>
+          <div class="preset-card" data-preset="fonts">
+            <div class="preset-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
+              </svg>
+            </div>
+            <span class="preset-title">仅字体</span>
+            <span class="preset-desc">字体配置与列表</span>
+          </div>
+          <div class="preset-card" data-preset="terminal">
+            <div class="preset-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+            </div>
+            <span class="preset-title">仅终端</span>
+            <span class="preset-desc">终端个性化配置</span>
+          </div>
+          <div class="preset-card" data-preset="share">
+            <div class="preset-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+            </div>
+            <span class="preset-title">分享包</span>
+            <span class="preset-desc">精简可分享版本</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">导出配置包</h2>
+              <p class="card-desc">将扫描结果打包导出为 .zip 文件，便于迁移与分享</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn-secondary" id="exportPreviewBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                预览内容
+              </button>
+              <button class="btn-primary" id="exportBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                立即导出
+              </button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label class="form-label">输出路径</label>
+                <div class="input-with-button">
+                  <input type="text" class="form-input" id="exportPath" placeholder="例如 C:\Temp\winstyles-export.zip" />
+                  <button class="btn-ghost" id="browseExportPath">浏览</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">导出类别</label>
+                <div class="chip-group" id="exportCategories">
+                  <label class="chip selected">
+                    <input type="checkbox" value="fonts" checked />
+                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="4 7 4 4 20 4 20 7" />
+                      <line x1="9" y1="20" x2="15" y2="20" />
+                      <line x1="12" y1="4" x2="12" y2="20" />
+                    </svg>
+                    字体
+                  </label>
+                  <label class="chip selected">
+                    <input type="checkbox" value="terminal" checked />
+                    <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="4 17 10 11 4 5" />
+                      <line x1="12" y1="19" x2="20" y2="19" />
+                    </svg>
+                    终端
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" value="theme" />
+                    主题
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" value="vscode" />
+                    VS Code
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="toggle-switch">
+                <input type="checkbox" id="exportIncludeDefaults" />
+                <span class="toggle-track"></span>
+                <span class="toggle-label">包含默认配置</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="exportIncludeFontFiles" />
+                <span class="toggle-track"></span>
+                <span class="toggle-label">包含字体文件</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-output">
+          <div class="output-header">
+            <span class="output-title">导出日志</span>
+            <div class="output-actions">
+              <button class="btn-icon-only" id="copyExportOutput" title="复制">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="export-result-container" id="exportResultContainer">
+            <div class="empty-state" style="padding: 32px 0;">
+              <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                style="width: 48px; height: 48px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p class="empty-title">准备导出</p>
+              <p class="empty-desc">选择预设或自定义选项后点击「立即导出」</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Import -->
+      <section class="page" id="page-import">
+        <!-- 拖放上传区域 -->
+        <div class="drop-zone" id="importDropZone">
+          <div class="drop-zone-content">
+            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <p class="drop-zone-title">拖放配置包到这里</p>
+            <p class="drop-zone-desc">或者在下方输入路径</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">导入配置包</h2>
+              <p class="card-desc">从配置包恢复个性化设置，建议先使用预览功能</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn-secondary" id="importDryRunBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                预览变更
+              </button>
+              <button class="btn-primary" id="importBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                开始导入
+              </button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label class="form-label">配置包路径</label>
+                <div class="input-with-button">
+                  <input type="text" class="form-input" id="importPath" placeholder="例如 C:\Temp\winstyles-export.zip" />
+                  <button class="btn-ghost" id="browseImportPath">浏览</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="toggle-switch">
+                <input type="checkbox" id="importSkipRestore" />
+                <span class="toggle-track"></span>
+                <span class="toggle-label">跳过创建还原点</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="importMergeMode" />
+                <span class="toggle-track"></span>
+                <span class="toggle-label">合并模式（保留现有配置）</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="alert alert-warning">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <div class="alert-content">
+              <p class="alert-title">注意</p>
+              <p class="alert-desc">导入配置会修改系统设置，建议先使用「预览变更」确认更改内容</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 导入预览/结果卡片 -->
+        <div class="card" id="importPreviewCard">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">变更预览</h2>
+              <p class="card-desc">以下是导入后将应用的配置变更</p>
+            </div>
+          </div>
+          <div id="importPreviewContent">
+            <div class="empty-state" style="padding: 32px 0;">
+              <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                style="width: 48px; height: 48px;">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <p class="empty-title">暂无预览数据</p>
+              <p class="empty-desc">选择配置包后点击「预览变更」</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-output">
+          <div class="output-header">
+            <span class="output-title">导入日志</span>
+          </div>
+          <pre class="output-content" id="importOutput">等待操作...</pre>
+        </div>
+      </section>
+
+      <!-- Page: Settings -->
+      <section class="page" id="page-settings">
+        <!-- 快速统计卡片 -->
+        <div class="stats-cards-row">
+          <div class="stats-card">
+            <div class="stats-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </div>
+            <div class="stats-info">
+              <span class="stats-value" id="statsTotalScans">0</span>
+              <span class="stats-label">扫描次数</span>
+            </div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
+              </svg>
+            </div>
+            <div class="stats-info">
+              <span class="stats-value" id="statsFontsDetected">0</span>
+              <span class="stats-label">检测字体</span>
+            </div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <div class="stats-info">
+              <span class="stats-value" id="statsExports">0</span>
+              <span class="stats-label">导出次数</span>
+            </div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+            </div>
+            <div class="stats-info">
+              <span class="stats-value" id="statsConfigs">0</span>
+              <span class="stats-label">配置项目</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">应用设置</h2>
+              <p class="card-desc">管理 WinstyleS 的偏好设置</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn-secondary" id="resetSettingsBtn">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+                重置设置
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3 class="settings-title">外观</h3>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">主题模式</span>
+                <span class="settings-item-desc">切换应用的明暗主题</span>
+              </div>
+              <select class="form-select form-select-sm" id="themeMode">
+                <option value="system">跟随系统</option>
+                <option value="light">浅色</option>
+                <option value="dark">深色</option>
               </select>
             </div>
-          </div>
-          <div class="output">
-            <div class="output-title">输出</div>
-            <pre id="scanOutput">扫描结果将在此显示...</pre>
-          </div>
-        </section>
-
-        <section class="panel glass page" id="page-export">
-          <div class="panel-header">
-            <div>
-              <h2>导出配置包</h2>
-              <p>导出 scan.json 与 manifest.json，支持 zip 包。</p>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">强调色</span>
+                <span class="settings-item-desc">自定义界面强调色</span>
+              </div>
+              <div class="color-picker-group">
+                <input type="color" id="accentColor" value="#667eea" class="color-picker" />
+                <button class="btn-ghost btn-sm" id="resetAccentColor">重置</button>
+              </div>
             </div>
-            <div class="panel-actions">
-              <button class="primary" id="exportBtn">立即导出</button>
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>输出路径</label>
-              <input id="exportPath" placeholder="例如 C:\\Temp\\winstyles-export.zip" />
-            </div>
-            <div class="field">
-              <label>类别</label>
-              <input id="exportCategories" placeholder="fonts,terminal" />
-            </div>
-            <div class="field">
-              <label class="toggle">
-                <input type="checkbox" id="exportIncludeDefaults" />
-                <span>包含默认项</span>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">界面动画</span>
+                <span class="settings-item-desc">开启界面过渡动画效果</span>
+              </div>
+              <label class="toggle-switch toggle-only">
+                <input type="checkbox" id="enableAnimations" checked />
+                <span class="toggle-track"></span>
               </label>
             </div>
           </div>
-          <div class="output">
-            <div class="output-title">输出</div>
-            <pre id="exportOutput">等待导出...</pre>
-          </div>
-        </section>
 
-        <section class="panel glass page" id="page-import">
-          <div class="panel-header">
-            <div>
-              <h2>导入配置包</h2>
-              <p>支持 dry-run 预览更改。</p>
-            </div>
-            <div class="panel-actions">
-              <button class="primary" id="importBtn">开始导入</button>
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>包路径</label>
-              <input id="importPath" placeholder="例如 C:\\Temp\\winstyles-export.zip" />
-            </div>
-            <div class="field">
-              <label class="toggle">
-                <input type="checkbox" id="importDryRun" checked />
-                <span>Dry-run</span>
+          <div class="settings-section">
+            <h3 class="settings-title">扫描设置</h3>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">自动扫描</span>
+                <span class="settings-item-desc">启动时自动执行扫描</span>
+              </div>
+              <label class="toggle-switch toggle-only">
+                <input type="checkbox" id="autoScan" />
+                <span class="toggle-track"></span>
               </label>
             </div>
-            <div class="field">
-              <label class="toggle">
-                <input type="checkbox" id="importSkipRestore" />
-                <span>跳过还原点</span>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">默认仅显示修改项</span>
+                <span class="settings-item-desc">扫描时默认过滤未修改的配置</span>
+              </div>
+              <label class="toggle-switch toggle-only">
+                <input type="checkbox" id="defaultModifiedOnly" />
+                <span class="toggle-track"></span>
               </label>
             </div>
           </div>
-          <div class="output">
-            <div class="output-title">输出</div>
-            <pre id="importOutput">等待导入...</pre>
-          </div>
-        </section>
 
-        <section class="panel glass page" id="page-inspect">
-          <div class="panel-header">
-            <div>
-              <h2>检视配置包</h2>
-              <p>读取 manifest 与 scan 元信息。</p>
+          <div class="settings-section">
+            <h3 class="settings-title">路径设置</h3>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">默认导出目录</span>
+                <span class="settings-item-desc" id="defaultExportPath">未设置 - 将使用系统临时目录</span>
+              </div>
+              <button class="btn-ghost btn-sm" id="setExportPath">更改</button>
             </div>
-            <div class="panel-actions">
-              <button class="primary" id="inspectBtn">检视</button>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">字体数据库缓存</span>
+                <span class="settings-item-desc" id="fontDbCachePath">~/.winstyles/font_db.json</span>
+              </div>
+              <button class="btn-ghost btn-sm" id="clearFontDbCache">清除缓存</button>
             </div>
           </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>包路径</label>
-              <input id="inspectPath" placeholder="例如 C:\\Temp\\winstyles-export.zip" />
-            </div>
-          </div>
-          <div class="output">
-            <div class="output-title">输出</div>
-            <pre id="inspectOutput">等待检视...</pre>
-          </div>
-        </section>
 
-        <section class="panel glass page" id="page-diff">
-          <div class="panel-header">
-            <div>
-              <h2>对比配置包</h2>
-              <p>比较两个配置包的差异。</p>
+          <div class="settings-section">
+            <h3 class="settings-title">数据与隐私</h3>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">发送匿名统计</span>
+                <span class="settings-item-desc">帮助改进 WinstyleS（不包含个人信息）</span>
+              </div>
+              <label class="toggle-switch toggle-only">
+                <input type="checkbox" id="sendAnalytics" />
+                <span class="toggle-track"></span>
+              </label>
             </div>
-            <div class="panel-actions">
-              <button class="primary" id="diffBtn">对比</button>
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>包 A</label>
-              <input id="diffPathA" placeholder="C:\\Temp\\A.zip" />
-            </div>
-            <div class="field">
-              <label>包 B</label>
-              <input id="diffPathB" placeholder="C:\\Temp\\B.zip" />
-            </div>
-            <div class="field">
-              <label class="toggle">
-                <input type="checkbox" id="diffShowAll" />
-                <span>显示未变化项</span>
+            <div class="settings-item">
+              <div class="settings-item-info">
+                <span class="settings-item-label">自动检查更新</span>
+                <span class="settings-item-desc">启动时检查应用和字体数据库更新</span>
+              </div>
+              <label class="toggle-switch toggle-only">
+                <input type="checkbox" id="autoCheckUpdates" checked />
+                <span class="toggle-track"></span>
               </label>
             </div>
           </div>
-          <div class="output">
-            <div class="output-title">输出</div>
-            <pre id="diffOutput">等待对比...</pre>
-          </div>
-        </section>
-      </main>
-    </div>
 
-    <script src="./main.js" defer></script>
-  </body>
+          <div class="settings-section">
+            <h3 class="settings-title">关于</h3>
+            <div class="about-card">
+              <div class="about-header">
+                <div class="about-logo">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" class="about-logo-svg"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5.5L10.5 4.25V11.25H3V5.5Z" />
+                    <path d="M3 12.75H10.5V19.75L3 18.5V12.75Z" />
+                    <path d="M11.5 4.1L21 2.5V11.25H11.5V4.1Z" />
+                    <path d="M11.5 12.75H21V21.5L11.5 19.9V12.75Z" />
+                  </svg>
+                </div>
+                <div class="about-text">
+                  <h4>WinstyleS</h4>
+                  <p class="about-subtitle">Windows Style Sync</p>
+                  <p class="about-version">版本 0.1.0</p>
+                </div>
+              </div>
+              <p class="about-desc">自动扫描、导出、同步你的 Windows 美化配置。支持字体、终端、主题等多种配置类型。</p>
+              <div class="about-links">
+                <a href="https://github.com/Thankyou-Cheems/WinstyleS" target="_blank" class="link-button">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path
+                      d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                  </svg>
+                  GitHub
+                </a>
+                <a href="https://github.com/Thankyou-Cheems/WinstyleS/issues" target="_blank" class="link-button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  反馈问题
+                </a>
+                <a href="https://github.com/Thankyou-Cheems/WinstyleS/releases" target="_blank" class="link-button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  更新日志
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="main.js" defer></script>
+</body>
+
 </html>

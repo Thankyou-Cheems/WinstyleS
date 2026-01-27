@@ -299,12 +299,69 @@ class ReportGenerator:
 
         return "\n".join(lines)
 
-    def generate_html(self) -> str:
+    def generate_html(self, embedded: bool = False) -> str:
         """生成 HTML 格式报告"""
         markdown_content = self.generate_markdown()
 
         # 简单的 Markdown 到 HTML 转换
         html_content = self._markdown_to_html(markdown_content)
+
+        # Scoped CSS for embedded use
+        css = """
+            .winstyles-report {
+                --bg-color: #0d1117;
+                --text-color: #c9d1d9;
+                --heading-color: #58a6ff;
+                --border-color: #30363d;
+                --table-bg: #161b22;
+                --code-bg: #1f2428;
+                --accent: #58a6ff;
+                
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                color: var(--text-color);
+                line-height: 1.6;
+            }
+            
+            .winstyles-report h1 {
+                color: var(--heading-color);
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 0.5rem;
+                margin-top: 0;
+            }
+            .winstyles-report h2 { color: var(--heading-color); margin-top: 2rem; }
+            .winstyles-report h3 { color: var(--text-color); }
+            .winstyles-report table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 1rem 0;
+                background-color: var(--table-bg);
+            }
+            .winstyles-report th, .winstyles-report td {
+                border: 1px solid var(--border-color);
+                padding: 0.75rem;
+                text-align: left;
+            }
+            .winstyles-report th { background-color: var(--code-bg); }
+            .winstyles-report code {
+                background-color: var(--code-bg);
+                padding: 0.2rem 0.4rem;
+                border-radius: 3px;
+                font-family: 'Cascadia Code', Consolas, monospace;
+            }
+            .winstyles-report a { color: var(--accent); text-decoration: none; }
+            .winstyles-report a:hover { text-decoration: underline; }
+            .winstyles-report blockquote {
+                border-left: 3px solid var(--accent);
+                margin: 1rem 0;
+                padding-left: 1rem;
+                color: #8b949e;
+            }
+            .winstyles-report ul { padding-left: 1.5rem; }
+            .winstyles-report li { margin: 0.5rem 0; }
+        """
+
+        if embedded:
+            return f"""<style>{css}</style><div class="winstyles-report">{html_content}</div>"""
 
         return f"""<!DOCTYPE html>
 <html lang="zh-CN">
