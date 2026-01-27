@@ -139,9 +139,7 @@ class WindowsRegistryAdapter(IRegistryAdapter):
                 value_type = winreg.REG_SZ
                 value = str(value)
 
-        with winreg.OpenKey(
-            root_key, sub_key, 0, winreg.KEY_SET_VALUE
-        ) as key:
+        with winreg.OpenKey(root_key, sub_key, 0, winreg.KEY_SET_VALUE) as key:
             winreg.SetValueEx(key, value_name, 0, value_type, value)
 
     def get_all_values(self, key_path: str) -> dict[str, Any]:

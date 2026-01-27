@@ -45,9 +45,7 @@ class FontSubstitutesScanner(BaseScanner):
 
         try:
             # 使用注册表适配器读取所有值
-            values = self._registry.get_all_values(
-                f"HKLM\\{self.REGISTRY_PATH}"
-            )
+            values = self._registry.get_all_values(f"HKLM\\{self.REGISTRY_PATH}")
 
             for name, value in values.items():
                 item = ScannedItem(
@@ -127,18 +125,18 @@ class FontLinkScanner(BaseScanner):
         items: list[ScannedItem] = []
 
         try:
-            values = self._registry.get_all_values(
-                f"HKLM\\{self.REGISTRY_PATH}"
-            )
+            values = self._registry.get_all_values(f"HKLM\\{self.REGISTRY_PATH}")
 
             for name, value in values.items():
-                items.append(ScannedItem(
-                    category=self.category,
-                    key=name,
-                    current_value=value,
-                    source_type=SourceType.REGISTRY,
-                    source_path=f"HKLM\\{self.REGISTRY_PATH}\\{name}",
-                ))
+                items.append(
+                    ScannedItem(
+                        category=self.category,
+                        key=name,
+                        current_value=value,
+                        source_type=SourceType.REGISTRY,
+                        source_path=f"HKLM\\{self.REGISTRY_PATH}\\{name}",
+                    )
+                )
 
         except Exception as e:
             print(f"FontLinkScanner error: {e}")

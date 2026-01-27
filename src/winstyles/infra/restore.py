@@ -22,6 +22,7 @@ END_NESTED_SYSTEM_CHANGE = 103
 
 class RESTOREPOINTINFO(ctypes.Structure):
     """还原点信息结构"""
+
     _fields_ = [
         ("dwEventType", wintypes.DWORD),
         ("dwRestorePtType", wintypes.DWORD),
@@ -32,6 +33,7 @@ class RESTOREPOINTINFO(ctypes.Structure):
 
 class STATEMGRSTATUS(ctypes.Structure):
     """状态管理器状态结构"""
+
     _fields_ = [
         ("nStatus", wintypes.DWORD),
         ("llSequenceNumber", ctypes.c_int64),

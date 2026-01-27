@@ -2,7 +2,6 @@
 WinstyleSApp - 主应用窗口
 """
 
-
 import customtkinter as ctk
 
 

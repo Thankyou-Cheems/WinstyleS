@@ -28,45 +28,31 @@ class ScannedItem(BaseModel):
     key: str = Field(..., description="配置键名")
     current_value: Any = Field(..., description="当前值")
     default_value: Any | None = Field(None, description="默认值")
-    change_type: ChangeType = Field(
-        ChangeType.MODIFIED, description="变更类型"
-    )
+    change_type: ChangeType = Field(ChangeType.MODIFIED, description="变更类型")
     source_type: SourceType = Field(..., description="数据来源类型")
     source_path: str = Field(..., description="数据来源路径")
     associated_files: list[AssociatedFile] = Field(
         default_factory=list, description="关联的资源文件"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="额外元数据"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="额外元数据")
 
 
 class ScanResult(BaseModel):
     """完整扫描结果"""
 
     scan_id: str = Field(
-        default_factory=lambda: datetime.now().strftime("%Y%m%d%H%M%S"),
-        description="扫描ID"
+        default_factory=lambda: datetime.now().strftime("%Y%m%d%H%M%S"), description="扫描ID"
     )
-    scan_time: datetime = Field(
-        default_factory=datetime.now, description="扫描时间"
-    )
+    scan_time: datetime = Field(default_factory=datetime.now, description="扫描时间")
     os_version: str = Field("", description="操作系统版本")
-    items: list[ScannedItem] = Field(
-        default_factory=list, description="扫描到的配置项"
-    )
-    summary: dict[str, int] = Field(
-        default_factory=dict, description="各类别统计"
-    )
+    items: list[ScannedItem] = Field(default_factory=list, description="扫描到的配置项")
+    summary: dict[str, int] = Field(default_factory=dict, description="各类别统计")
     duration_ms: int | None = Field(None, description="扫描耗时（毫秒）")
 
     @property
     def modified_items(self) -> list[ScannedItem]:
         """获取所有修改过的配置项"""
-        return [
-            item for item in self.items
-            if item.change_type != ChangeType.DEFAULT
-        ]
+        return [item for item in self.items if item.change_type != ChangeType.DEFAULT]
 
     @property
     def total_count(self) -> int:
@@ -96,9 +82,7 @@ class FontInfo(BaseModel):
     file: str = Field(..., description="字体文件相对路径")
     family: str | None = Field(None, description="字体家族")
     style: str | None = Field(None, description="字体样式")
-    usage: list[str] = Field(
-        default_factory=list, description="使用场景"
-    )
+    usage: list[str] = Field(default_factory=list, description="使用场景")
     sha256: str | None = Field(None, description="文件哈希")
 
 
@@ -126,12 +110,8 @@ class ExportOptions(BaseModel):
 class ImportInstructions(BaseModel):
     """导入说明"""
 
-    order: list[str] = Field(
-        default_factory=list, description="应用顺序"
-    )
-    warnings: list[str] = Field(
-        default_factory=list, description="警告信息"
-    )
+    order: list[str] = Field(default_factory=list, description="应用顺序")
+    warnings: list[str] = Field(default_factory=list, description="警告信息")
     requires_admin: bool = Field(False, description="需要管理员权限")
     requires_restart: bool = Field(False, description="需要重启应用")
     requires_reboot: bool = Field(False, description="需要重启系统")
@@ -142,26 +122,16 @@ class Manifest(BaseModel):
     配置包清单 - manifest.json 的完整结构
     """
 
-    schema_version: str = Field(
-        "1.0.0", alias="$schema", description="Schema 版本"
-    )
+    schema_version: str = Field("1.0.0", alias="$schema", description="Schema 版本")
     version: str = Field("1.0.0", description="包版本")
-    created_at: datetime = Field(
-        default_factory=datetime.now, description="创建时间"
-    )
+    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
     created_by: str = Field("WinstyleS", description="创建工具")
 
     source_system: SourceSystem = Field(..., description="来源系统信息")
-    export_options: ExportOptions = Field(
-        default_factory=ExportOptions, description="导出选项"
-    )
+    export_options: ExportOptions = Field(default_factory=ExportOptions, description="导出选项")
 
-    fonts: list[FontInfo] = Field(
-        default_factory=list, description="字体列表"
-    )
-    registry_entries: list[RegistryEntry] = Field(
-        default_factory=list, description="注册表条目"
-    )
+    fonts: list[FontInfo] = Field(default_factory=list, description="字体列表")
+    registry_entries: list[RegistryEntry] = Field(default_factory=list, description="注册表条目")
 
     import_instructions: ImportInstructions = Field(
         default_factory=ImportInstructions, description="导入说明"

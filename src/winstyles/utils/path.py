@@ -87,7 +87,7 @@ def collapse_vars(path: str, prefer_vars: bool = True) -> str:
         # 不区分大小写比较 (Windows)
         if path.lower().startswith(var_value.lower()):
             # 替换为环境变量
-            relative_part = path[len(var_value):]
+            relative_part = path[len(var_value) :]
             return f"{var_placeholder}{relative_part}"
 
     return path

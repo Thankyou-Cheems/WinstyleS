@@ -78,24 +78,28 @@ class WindowsTerminalScanner(BaseScanner):
 
             for key, value in key_settings:
                 if value is not None:
-                    items.append(ScannedItem(
-                        category=self.category,
-                        key=f"windowsTerminal.{key}",
-                        current_value=value,
-                        source_type=SourceType.FILE,
-                        source_path=str(settings_path),
-                    ))
+                    items.append(
+                        ScannedItem(
+                            category=self.category,
+                            key=f"windowsTerminal.{key}",
+                            current_value=value,
+                            source_type=SourceType.FILE,
+                            source_path=str(settings_path),
+                        )
+                    )
 
             # 扫描 profiles.defaults
             defaults = settings.get("profiles", {}).get("defaults", {})
             for key, value in defaults.items():
-                items.append(ScannedItem(
-                    category=self.category,
-                    key=f"windowsTerminal.defaults.{key}",
-                    current_value=value,
-                    source_type=SourceType.FILE,
-                    source_path=str(settings_path),
-                ))
+                items.append(
+                    ScannedItem(
+                        category=self.category,
+                        key=f"windowsTerminal.defaults.{key}",
+                        current_value=value,
+                        source_type=SourceType.FILE,
+                        source_path=str(settings_path),
+                    )
+                )
 
         except Exception as e:
             print(f"WindowsTerminalScanner error: {e}")
@@ -153,21 +157,23 @@ class PowerShellProfileScanner(BaseScanner):
             try:
                 content = self._fs.read_text(str(profile_path))
 
-                items.append(ScannedItem(
-                    category=self.category,
-                    key=f"powershell.profile.{profile_path.parent.name}",
-                    current_value=content,
-                    source_type=SourceType.FILE,
-                    source_path=str(profile_path),
-                    associated_files=[
-                        AssociatedFile(
-                            type=AssetType.SCRIPT,
-                            name=profile_path.name,
-                            path=str(profile_path),
-                            exists=True,
-                        )
-                    ],
-                ))
+                items.append(
+                    ScannedItem(
+                        category=self.category,
+                        key=f"powershell.profile.{profile_path.parent.name}",
+                        current_value=content,
+                        source_type=SourceType.FILE,
+                        source_path=str(profile_path),
+                        associated_files=[
+                            AssociatedFile(
+                                type=AssetType.SCRIPT,
+                                name=profile_path.name,
+                                path=str(profile_path),
+                                exists=True,
+                            )
+                        ],
+                    )
+                )
 
             except Exception as e:
                 print(f"PowerShellProfileScanner error: {e}")
