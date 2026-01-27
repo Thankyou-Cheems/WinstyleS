@@ -1,0 +1,181 @@
+{
+  "$comment": "开源字体数据库 - 用于识别用户安装的开源字体并提供来源信息",
+  "last_updated": "2026-01-27",
+  "fonts": [
+    {
+      "name": "Maple Mono",
+      "patterns": ["Maple Mono*", "MapleMono*"],
+      "homepage": "https://github.com/subframe7536/maple-font",
+      "download": "https://github.com/subframe7536/maple-font/releases",
+      "license": "SIL OFL 1.1",
+      "description": "带有圆角的等宽字体，支持连字和中文"
+    },
+    {
+      "name": "JetBrains Mono",
+      "patterns": ["JetBrains Mono*", "JetBrainsMono*"],
+      "homepage": "https://www.jetbrains.com/lp/mono/",
+      "download": "https://github.com/JetBrains/JetBrainsMono/releases",
+      "license": "SIL OFL 1.1",
+      "description": "JetBrains 出品的编程字体，支持连字"
+    },
+    {
+      "name": "Fira Code",
+      "patterns": ["Fira Code*", "FiraCode*"],
+      "homepage": "https://github.com/tonsky/FiraCode",
+      "download": "https://github.com/tonsky/FiraCode/releases",
+      "license": "SIL OFL 1.1",
+      "description": "基于 Fira Mono 的等宽字体，支持编程连字"
+    },
+    {
+      "name": "Cascadia Code",
+      "patterns": ["Cascadia Code*", "Cascadia Mono*", "CascadiaCode*", "CascadiaMono*"],
+      "homepage": "https://github.com/microsoft/cascadia-code",
+      "download": "https://github.com/microsoft/cascadia-code/releases",
+      "license": "SIL OFL 1.1",
+      "description": "微软出品的编程字体，Windows Terminal 默认字体"
+    },
+    {
+      "name": "Source Code Pro",
+      "patterns": ["Source Code Pro*", "SourceCodePro*"],
+      "homepage": "https://github.com/adobe-fonts/source-code-pro",
+      "download": "https://github.com/adobe-fonts/source-code-pro/releases",
+      "license": "SIL OFL 1.1",
+      "description": "Adobe 出品的等宽字体"
+    },
+    {
+      "name": "Hack",
+      "patterns": ["Hack*"],
+      "homepage": "https://sourcefoundry.org/hack/",
+      "download": "https://github.com/source-foundry/Hack/releases",
+      "license": "MIT",
+      "description": "专为源代码设计的开源字体"
+    },
+    {
+      "name": "Victor Mono",
+      "patterns": ["Victor Mono*", "VictorMono*"],
+      "homepage": "https://rubjo.github.io/victor-mono/",
+      "download": "https://github.com/rubjo/victor-mono/releases",
+      "license": "SIL OFL 1.1",
+      "description": "带有手写斜体的编程字体"
+    },
+    {
+      "name": "Iosevka",
+      "patterns": ["Iosevka*"],
+      "homepage": "https://typeof.net/Iosevka/",
+      "download": "https://github.com/be5invis/Iosevka/releases",
+      "license": "SIL OFL 1.1",
+      "description": "高度可定制的开源编程字体"
+    },
+    {
+      "name": "Monaspace",
+      "patterns": ["Monaspace*"],
+      "homepage": "https://monaspace.githubnext.com/",
+      "download": "https://github.com/githubnext/monaspace/releases",
+      "license": "SIL OFL 1.1",
+      "description": "GitHub Next 出品的编程字体家族"
+    },
+    {
+      "name": "Nerd Fonts",
+      "patterns": ["*Nerd Font*", "*NF", "*NFM"],
+      "homepage": "https://www.nerdfonts.com/",
+      "download": "https://github.com/ryanoasis/nerd-fonts/releases",
+      "license": "MIT",
+      "description": "为开发者添加图标的字体补丁合集"
+    },
+    {
+      "name": "Sarasa Gothic",
+      "patterns": ["Sarasa*", "更纱黑体*"],
+      "homepage": "https://github.com/be5invis/Sarasa-Gothic",
+      "download": "https://github.com/be5invis/Sarasa-Gothic/releases",
+      "license": "SIL OFL 1.1",
+      "description": "基于 Iosevka 和 Source Han Sans 的 CJK 编程字体"
+    },
+    {
+      "name": "霞鹜文楷",
+      "patterns": ["LXGW*", "霞鹜*", "LXGWWenKai*"],
+      "homepage": "https://github.com/lxgw/LxgwWenKai",
+      "download": "https://github.com/lxgw/LxgwWenKai/releases",
+      "license": "SIL OFL 1.1",
+      "description": "开源中文楷体字体"
+    },
+    {
+      "name": "思源黑体",
+      "patterns": ["Source Han Sans*", "Noto Sans CJK*", "思源黑体*"],
+      "homepage": "https://github.com/adobe-fonts/source-han-sans",
+      "download": "https://github.com/adobe-fonts/source-han-sans/releases",
+      "license": "SIL OFL 1.1",
+      "description": "Adobe 与 Google 合作的开源 CJK 字体"
+    },
+    {
+      "name": "思源宋体",
+      "patterns": ["Source Han Serif*", "Noto Serif CJK*", "思源宋体*"],
+      "homepage": "https://github.com/adobe-fonts/source-han-serif",
+      "download": "https://github.com/adobe-fonts/source-han-serif/releases",
+      "license": "SIL OFL 1.1",
+      "description": "Adobe 与 Google 合作的开源宋体"
+    },
+    {
+      "name": "Inconsolata",
+      "patterns": ["Inconsolata*"],
+      "homepage": "https://levien.com/type/myfonts/inconsolata.html",
+      "download": "https://github.com/googlefonts/Inconsolata/releases",
+      "license": "SIL OFL 1.1",
+      "description": "经典的开源等宽字体"
+    },
+    {
+      "name": "Anonymous Pro",
+      "patterns": ["Anonymous Pro*", "AnonymousPro*"],
+      "homepage": "https://www.marksimonson.com/fonts/view/anonymous-pro",
+      "download": "https://www.marksimonson.com/fonts/view/anonymous-pro",
+      "license": "SIL OFL 1.1",
+      "description": "专为编程设计的等宽字体"
+    },
+    {
+      "name": "IBM Plex Mono",
+      "patterns": ["IBM Plex Mono*", "IBMPlexMono*"],
+      "homepage": "https://www.ibm.com/plex/",
+      "download": "https://github.com/IBM/plex/releases",
+      "license": "SIL OFL 1.1",
+      "description": "IBM 出品的开源字体家族"
+    },
+    {
+      "name": "Commit Mono",
+      "patterns": ["Commit Mono*", "CommitMono*"],
+      "homepage": "https://commitmono.com/",
+      "download": "https://github.com/eigilnikolajsen/commit-mono/releases",
+      "license": "SIL OFL 1.1",
+      "description": "针对编程优化的等宽字体"
+    },
+    {
+      "name": "Geist Mono",
+      "patterns": ["Geist Mono*", "GeistMono*"],
+      "homepage": "https://vercel.com/font",
+      "download": "https://github.com/vercel/geist-font/releases",
+      "license": "SIL OFL 1.1",
+      "description": "Vercel 出品的编程字体"
+    },
+    {
+      "name": "Recursive",
+      "patterns": ["Recursive*"],
+      "homepage": "https://www.recursive.design/",
+      "download": "https://github.com/arrowtype/recursive/releases",
+      "license": "SIL OFL 1.1",
+      "description": "可变字体，支持多种字重和风格"
+    }
+  ],
+  "version_differences": {
+    "$comment": "Windows 不同版本间的已知默认值差异，这些不应被视为用户修改",
+    "font_substitutes": {
+      "Helv": {
+        "win11": "MS Sans Serif",
+        "win10": "Microsoft Sans Serif",
+        "note": "两者功能等效"
+      },
+      "Tms Rmn": {
+        "win11": "MS Serif",
+        "win10": "Times New Roman",
+        "note": "两者功能等效"
+      }
+    }
+  }
+}

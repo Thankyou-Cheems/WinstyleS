@@ -296,15 +296,154 @@ def inspect(
 
 
 @app.command()
-def restore() -> None:
+def restore(
+    use_system_restore: bool = typer.Option(
+        False,
+        "--system-restore",
+        "-s",
+        help="打开系统还原界面",
+    ),
+) -> None:
     """
     ⏪ 回滚到之前的状态
 
-    使用 WinstyleS 创建的备份进行恢复。
+    使用 WinstyleS 创建的备份或系统还原点进行恢复。
     """
     console.print("[bold blue]准备回滚...[/bold blue]")
-    # TODO: 实现回滚逻辑
-    console.print("[yellow]回滚功能正在开发中...[/yellow]")
+
+    if use_system_restore:
+        console.print("[yellow]正在打开系统还原界面...[/yellow]")
+        import subprocess
+
+        try:
+            # 打开系统还原界面
+            subprocess.Popen(
+                ["rstrui.exe"],
+                creationflags=subprocess.CREATE_NEW_CONSOLE,
+            )
+            console.print("[green]系统还原界面已打开[/green]")
+            console.print(
+                "[dim]请在系统还原界面中选择由 WinstyleS 创建的还原点进行恢复[/dim]"
+            )
+        except Exception as e:
+            console.print(f"[red]无法打开系统还原: {e}[/red]")
+            raise typer.Exit(code=1)
+        return
+
+    # 列出可用的备份包
+    backup_dir = Path.home() / ".winstyles" / "backups"
+    if not backup_dir.exists():
+        console.print("[yellow]没有找到备份文件[/yellow]")
+        console.print(
+            "[dim]使用 --system-restore 参数打开系统还原界面[/dim]"
+        )
+        return
+
+    backups = sorted(backup_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not backups:
+        console.print("[yellow]没有找到备份文件[/yellow]")
+        console.print(
+            "[dim]使用 --system-restore 参数打开系统还原界面[/dim]"
+        )
+        return
+
+    table = Table(title="可用备份")
+    table.add_column("#", style="cyan")
+    table.add_column("文件名", style="white")
+    table.add_column("创建时间", style="green")
+    table.add_column("大小", style="yellow")
+
+    for i, backup in enumerate(backups[:10], 1):
+        stat = backup.stat()
+        size_kb = stat.st_size / 1024
+        from datetime import datetime
+        mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
+        table.add_row(str(i), backup.name, mtime, f"{size_kb:.1f} KB")
+
+    console.print(table)
+    console.print("\n[dim]使用 winstyles import <备份路径> 来恢复配置[/dim]")
+    console.print("[dim]使用 --system-restore 参数打开系统还原界面[/dim]")
+
+
+@app.command()
+def report(
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="输出文件路径 (.md 或 .html)",
+    ),
+    format: str = typer.Option(
+        "markdown",
+        "--format",
+        "-f",
+        help="输出格式: markdown, html",
+    ),
+    categories: list[str] | None = typer.Option(
+        None,
+        "--category",
+        "-c",
+        help="要扫描的类别，可多次指定",
+    ),
+    open_browser: bool = typer.Option(
+        False,
+        "--open",
+        help="生成后在浏览器中打开",
+    ),
+) -> None:
+    """
+    📊 生成扫描报告
+
+    分析系统配置并生成人类可读的报告，包括:
+    - 用户自定义配置识别
+    - 系统版本差异区分
+    - 开源字体来源信息
+    """
+    from winstyles.core.report import ReportGenerator
+
+    console.print("[bold blue]正在扫描并生成报告...[/bold blue]")
+
+    engine = StyleEngine()
+    scan_result = engine.scan_all(categories)
+
+    generator = ReportGenerator(scan_result)
+
+    if format.lower() == "html":
+        content = generator.generate_html()
+        default_ext = ".html"
+    else:
+        content = generator.generate_markdown()
+        default_ext = ".md"
+
+    if output:
+        output.write_text(content, encoding="utf-8")
+        console.print(f"[green]报告已保存至: {output}[/green]")
+
+        if open_browser:
+            import webbrowser
+            webbrowser.open(str(output.resolve()))
+    else:
+        # 默认保存到临时文件并显示
+        if open_browser:
+            import tempfile
+            import webbrowser
+
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=default_ext,
+                delete=False,
+                encoding="utf-8",
+            ) as f:
+                f.write(content)
+                temp_path = f.name
+
+            webbrowser.open(temp_path)
+            console.print(f"[green]报告已在浏览器中打开[/green]")
+        else:
+            # 直接打印 Markdown
+            from rich.markdown import Markdown
+            console.print(Markdown(content))
+
 
 
 def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:

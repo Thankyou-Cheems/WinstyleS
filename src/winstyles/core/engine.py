@@ -20,8 +20,12 @@ from winstyles.infra.registry import WindowsRegistryAdapter
 from winstyles.infra.restore import RestorePointManager
 from winstyles.infra.system import SystemAPI
 from winstyles.plugins.base import BaseScanner
+from winstyles.plugins.cursor import CursorScanner
 from winstyles.plugins.fonts import FontLinkScanner, FontSubstitutesScanner
 from winstyles.plugins.terminal import PowerShellProfileScanner, WindowsTerminalScanner
+from winstyles.plugins.theme import ThemeScanner
+from winstyles.plugins.vscode import VSCodeScanner
+from winstyles.plugins.wallpaper import WallpaperScanner
 
 
 class StyleEngine:
@@ -45,10 +49,21 @@ class StyleEngine:
         """动态加载所有扫描器插件"""
         registry = WindowsRegistryAdapter()
         fs = WindowsFileSystemAdapter()
+        # 字体扫描器
         self.register_scanner(FontSubstitutesScanner(registry, fs))
         self.register_scanner(FontLinkScanner(registry, fs))
+        # 终端扫描器
         self.register_scanner(WindowsTerminalScanner(registry, fs))
         self.register_scanner(PowerShellProfileScanner(registry, fs))
+        # 主题扫描器
+        self.register_scanner(ThemeScanner(registry, fs))
+        # 壁纸扫描器
+        self.register_scanner(WallpaperScanner(registry, fs))
+        # 鼠标指针扫描器
+        self.register_scanner(CursorScanner(registry, fs))
+        # VS Code 扫描器
+        self.register_scanner(VSCodeScanner(registry, fs))
+
 
     def _load_defaults(self) -> None:
         """加载 Windows 默认值数据库"""

@@ -26,45 +26,21 @@
     }
   },
   
-  "appearance": {
-    "apps_use_light_theme": 1,
-    "system_uses_light_theme": 1,
-    "enable_transparency": 1,
-    "color_prevalence": 0,
-    "colorization_color": "0xC40078D7",
-    "colorization_color_balance": 89,
-    "accent_color_menu": 0,
-    "accent_palette": "86CAFF00A6D8FF0076B9FF000078D700005A9E000042750000264200F7630C00"
+  "theme": {
+    "appsUseLightTheme": 1,
+    "systemUsesLightTheme": 1,
+    "enableTransparency": 1,
+    "colorPrevalence": 0,
+    "accentColor": "#0078D4"
   },
-  
-  "terminal": {
-    "windows_terminal": {
-      "default_profile": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
-      "font_face": "Cascadia Mono",
-      "font_size": 12,
-      "theme": "system",
-      "use_acrylic": true
-    }
+
+  "wallpaper": {
+    "style": "10",
+    "tile": "0"
   },
-  
-  "explorer": {
-    "hidden_files_visible": 0,
-    "file_extensions_visible": 0,
-    "full_path_in_title": 0,
-    "show_compact_view": 1,
-    "launch_to": "quick_access"
-  },
-  
-  "taskbar": {
-    "alignment": "center",
-    "show_search": 1,
-    "show_task_view": 1,
-    "show_widgets": 1,
-    "show_chat": 1
-  },
-  
+
   "cursor": {
-    "scheme": "(None)",
+    "scheme": "Windows Default",
     "cursors": {
       "Arrow": "%SystemRoot%\\cursors\\aero_arrow.cur",
       "Help": "%SystemRoot%\\cursors\\aero_helpsel.cur",
@@ -82,5 +58,52 @@
       "UpArrow": "%SystemRoot%\\cursors\\aero_up.cur",
       "Hand": "%SystemRoot%\\cursors\\aero_link.cur"
     }
+  },
+  
+  "terminal": {
+    "windows_terminal": {
+      "default_profile": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+      "font_face": "Cascadia Mono",
+      "font_size": 12,
+      "theme": "system",
+      "use_acrylic": true
+    }
+  },
+
+  "vscode": {
+    "editor.fontFamily": "Consolas, 'Courier New', monospace",
+    "editor.fontSize": 14,
+    "editor.fontWeight": "normal",
+    "editor.fontLigatures": false,
+    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.iconTheme": "vs-seti",
+    "terminal.integrated.fontSize": 14
+  },
+  
+  "explorer": {
+    "hidden_files_visible": 0,
+    "file_extensions_visible": 0,
+    "full_path_in_title": 0,
+    "show_compact_view": 1,
+    "launch_to": "quick_access"
+  },
+  
+  "taskbar": {
+    "alignment": "center",
+    "show_search": 1,
+    "show_task_view": 1,
+    "show_widgets": 1,
+    "show_chat": 1
+  },
+
+  "appearance": {
+    "apps_use_light_theme": 1,
+    "system_uses_light_theme": 1,
+    "enable_transparency": 1,
+    "color_prevalence": 0,
+    "colorization_color": "0xC40078D7",
+    "colorization_color_balance": 89,
+    "accent_color_menu": 0,
+    "accent_palette": "86CAFF00A6D8FF0076B9FF000078D700005A9E000042750000264200F7630C00"
   }
 }
