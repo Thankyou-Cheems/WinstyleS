@@ -5,7 +5,6 @@
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
-from typing import Optional
 
 # 还原点类型
 APPLICATION_INSTALL = 0
@@ -49,7 +48,7 @@ class RestorePointManager:
     """
 
     def __init__(self) -> None:
-        self._srclient: Optional[ctypes.WinDLL] = None
+        self._srclient: ctypes.WinDLL | None = None
         self._load_library()
 
     def _load_library(self) -> None:
