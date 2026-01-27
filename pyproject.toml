@@ -1,6 +1,6 @@
 [project]
 name = "winstyles"
-version = "0.1.0"
+version = "0.2.0"
 description = "WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具"
 readme = "README.md"
 requires-python = ">=3.11"

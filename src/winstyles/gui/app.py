@@ -11,6 +11,7 @@ from pathlib import Path
 import customtkinter as ctk  # type: ignore[import-untyped]
 
 from winstyles.core.engine import StyleEngine
+from winstyles.core.report import ReportGenerator
 
 
 class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
@@ -33,7 +34,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
         # 窗口配置
         self.title("WinstyleS")
-        self.geometry("1000x640")
+        self.geometry("1080x720")
         self.minsize(920, 600)
         self.configure(fg_color=self.COLOR_BG)
 
@@ -46,6 +47,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         self.font_subtitle = ctk.CTkFont(family="Segoe UI Variable", size=13)
         self.font_button = ctk.CTkFont(family="Segoe UI Variable", size=14, weight="bold")
         self.font_body = ctk.CTkFont(family="Segoe UI Variable", size=12)
+        self.font_mono = ctk.CTkFont(family="Cascadia Code", size=12)
 
         # 状态
         self.active_page = "scan"
@@ -84,6 +86,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         self.nav_buttons = {}
         nav_items = [
             ("扫描", "scan"),
+            ("报告", "report"),
             ("导出", "export"),
             ("导入", "import"),
             ("设置", "settings"),
@@ -132,6 +135,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         # 页面容器
         self.pages = {
             "scan": self._build_scan_page(),
+            "report": self._build_report_page(),
             "export": self._build_export_page(),
             "import": self._build_import_page(),
             "settings": self._build_settings_page(),
@@ -207,12 +211,14 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
     def _update_header(self, name: str) -> None:
         title_map = {
             "scan": "扫描",
+            "report": "分析报告",
             "export": "导出",
             "import": "导入",
             "settings": "设置",
         }
         desc_map = {
-            "scan": "扫描系统个性化配置并生成报告",
+            "scan": "扫描系统个性化配置并生成差异数据",
+            "report": "智能分析配置变更，识别开源字体",
             "export": "导出配置包，便于迁移与备份",
             "import": "从配置包恢复个性化设置",
             "settings": "管理默认路径与显示选项",
@@ -275,6 +281,88 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         self.scan_output.grid(row=3, column=0, padx=24, pady=(0, 24), sticky="nsew")
 
         return frame
+
+    def _build_report_page(self) -> ctk.CTkFrame:
+        frame = ctk.CTkFrame(self.main_frame, corner_radius=14, fg_color=self.COLOR_PANEL)
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_rowconfigure(3, weight=1)
+
+        title = ctk.CTkLabel(
+            frame,
+            text="系统分析报告",
+            font=self.font_title,
+            text_color=self.COLOR_TEXT,
+        )
+        subtitle = ctk.CTkLabel(
+            frame,
+            text="一键生成智能化分析报告，识别用户自定义项目与开源字体",
+            font=self.font_subtitle,
+            text_color=self.COLOR_MUTED,
+        )
+
+        self.report_btn = ctk.CTkButton(
+            frame,
+            text="生成最新报告",
+            font=self.font_button,
+            height=44,
+            corner_radius=12,
+            fg_color=self.COLOR_ACCENT,
+            hover_color=self.COLOR_ACCENT_HOVER,
+            command=self._on_report_click,
+        )
+
+        # 报告显示区域
+        self.report_output = ctk.CTkTextbox(
+            frame,
+            height=320,
+            corner_radius=12,
+            fg_color="#1E1E1E",  # 深色背景方便阅读代码
+            text_color="#D4D4D4",
+            border_width=0,
+            font=self.font_mono,
+        )
+        self.report_output.insert("end", "点击上方按钮生成报告...\n")
+        self.report_output.configure(state="disabled")
+
+        title.grid(row=0, column=0, padx=24, pady=(20, 4), sticky="w")
+        subtitle.grid(row=1, column=0, padx=24, pady=(0, 16), sticky="w")
+        self.report_btn.grid(row=2, column=0, padx=24, pady=(0, 12), sticky="w")
+        self.report_output.grid(row=3, column=0, padx=24, pady=(0, 24), sticky="nsew")
+
+        return frame
+
+    def _on_report_click(self) -> None:
+        self.report_btn.configure(state="disabled")
+        self.set_status("正在分析系统配置...")
+        self.report_output.configure(state="normal")
+        self.report_output.delete("1.0", "end")
+        self.report_output.insert("end", "正在扫描中，请稍候...\n")
+        self.report_output.configure(state="disabled")
+
+        thread = threading.Thread(target=self._run_report_generation, daemon=True)
+        thread.start()
+
+    def _run_report_generation(self) -> None:
+        try:
+            engine = StyleEngine()
+            result = engine.scan_all(categories=None)
+            generator = ReportGenerator(result)
+            report_content = generator.generate_markdown()
+
+            self.after(0, lambda: self._show_report(report_content))
+            self.after(0, lambda: self.set_status("报告生成完成"))
+        except Exception as exc:
+            message = f"生成失败: {exc}\n"
+            self.after(0, lambda: self._show_report(message))
+            self.after(0, lambda: self.set_status("生成失败"))
+        finally:
+            self.after(0, lambda: self.report_btn.configure(state="normal"))
+
+    def _show_report(self, content: str) -> None:
+        self.report_output.configure(state="normal")
+        self.report_output.delete("1.0", "end")
+        self.report_output.insert("end", content)
+        self.report_output.configure(state="disabled")
 
     def _build_export_page(self) -> ctk.CTkFrame:
         frame = ctk.CTkFrame(self.main_frame, corner_radius=14, fg_color=self.COLOR_PANEL)
