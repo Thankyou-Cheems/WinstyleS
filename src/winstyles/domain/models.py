@@ -141,3 +141,13 @@ class Manifest(BaseModel):
 
     class Config:
         populate_by_name = True
+
+class FontInfo(BaseModel):
+    """开源字体信息"""
+
+    name: str
+    patterns: list[str] = Field(default_factory=list)
+    homepage: str = Field(default="")
+    download: str = Field(default="")
+    license: str = Field(default="")
+    description: str = Field(default="")

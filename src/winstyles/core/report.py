@@ -15,20 +15,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from winstyles.domain.models import ScannedItem, ScanResult
+from winstyles.core.update_checker import UpdateChecker, UpdateInfo
+from winstyles.domain.models import FontInfo, ScannedItem, ScanResult
 from winstyles.domain.types import ChangeType
-
-
-@dataclass
-class FontInfo:
-    """开源字体信息"""
-
-    name: str
-    patterns: list[str]
-    homepage: str
-    download: str
-    license: str
-    description: str = ""
+from winstyles.utils.font_utils import find_font_path, get_font_version
 
 
 @dataclass
@@ -38,7 +28,9 @@ class ClassifiedChanges:
     user_customizations: list[ScannedItem] = field(default_factory=list)
     version_differences: list[ScannedItem] = field(default_factory=list)
     system_defaults: list[ScannedItem] = field(default_factory=list)
-    detected_fonts: list[tuple[ScannedItem, FontInfo]] = field(default_factory=list)
+    detected_fonts: list[tuple[ScannedItem, FontInfo, UpdateInfo | None]] = field(
+        default_factory=list
+    )
 
 
 class ReportGenerator:
@@ -77,41 +69,49 @@ class ReportGenerator:
         "SimHei",
     ]
 
-    def __init__(self, scan_result: ScanResult) -> None:
+    def __init__(self, scan_result: ScanResult, check_updates: bool = True) -> None:
         self.scan_result = scan_result
+        self.check_updates = check_updates
+        self.update_checker = UpdateChecker()
         self._font_db: list[FontInfo] = []
         self._version_diffs: dict[str, dict[str, str]] = {}
         self._load_font_db()
 
     def _load_font_db(self) -> None:
-        """加载开源字体数据库"""
-        # Path: src/winstyles/core/report.py -> parents[3] = project root
-        db_path = Path(__file__).resolve().parents[3] / "data" / "opensource_fonts.json"
+        """加载开源字体数据库 (优先远程，失败回退本地)"""
+        data = None
 
-        if not db_path.exists():
+        # 尝试远程获取
+        if self.check_updates:
+            data = self.update_checker.fetch_remote_db()
+
+        # 回退到本地
+        if not data:
+            db_path = Path(__file__).resolve().parents[3] / "data" / "opensource_fonts.json"
+            if db_path.exists():
+                try:
+                    with open(db_path, encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    pass
+
+        if not data:
             return
 
-        try:
-            with open(db_path, encoding="utf-8") as f:
-                data = json.load(f)
-
-            for font in data.get("fonts", []):
-                self._font_db.append(
-                    FontInfo(
-                        name=font["name"],
-                        patterns=font.get("patterns", []),
-                        homepage=font.get("homepage", ""),
-                        download=font.get("download", ""),
-                        license=font.get("license", ""),
-                        description=font.get("description", ""),
-                    )
+        for font in data.get("fonts", []):
+            self._font_db.append(
+                FontInfo(
+                    name=font["name"],
+                    patterns=font.get("patterns", []),
+                    homepage=font.get("homepage", ""),
+                    download=font.get("download", ""),
+                    license=font.get("license", ""),
+                    description=font.get("description", ""),
                 )
+            )
 
-            version_diffs = data.get("version_differences", {})
-            self._version_diffs = version_diffs.get("font_substitutes", {})
-
-        except Exception:
-            pass
+        version_diffs = data.get("version_differences", {})
+        self._version_diffs = version_diffs.get("font_substitutes", {})
 
     def _match_font(self, font_name: str) -> FontInfo | None:
         """匹配开源字体"""
@@ -161,7 +161,17 @@ class ReportGenerator:
             value = str(item.current_value)
             font_info = self._match_font(value)
             if font_info:
-                result.detected_fonts.append((item, font_info))
+                update_info = None
+                if self.check_updates:
+                    # 1. 查找本地文件路径
+                    # 注意：value 是字体名称 (如 "Maple Mono SC NF")，需要解析为文件路径
+                    font_path = find_font_path(value)
+                    local_version = get_font_version(font_path) if font_path else None
+
+                    # 2. 检查更新
+                    update_info = self.update_checker.check_font_update(font_info, local_version)
+
+                result.detected_fonts.append((item, font_info, update_info))
 
             # 分类
             if self._is_user_customization(item):
@@ -239,20 +249,28 @@ class ReportGenerator:
         # 检测到的开源字体
         if classified.detected_fonts:
             lines.append("\n## 🔤 检测到的开源字体\n")
-            lines.append("| 字体 | 许可证 | 说明 | 链接 |")
-            lines.append("|------|--------|------|------|")
+            lines.append("| 字体 | 版本 | 许可证 | 说明 | 链接 |")
+            lines.append("|------|------|--------|------|------|")
 
             seen_fonts: set[str] = set()
-            for item, font_info in classified.detected_fonts:
+            for item, font_info, update_info in classified.detected_fonts:
                 if font_info.name in seen_fonts:
                     continue
                 seen_fonts.add(font_info.name)
+
+                version_str = "未知"
+                if update_info:
+                    local_ver = update_info.current_version or "Unknown"
+                    if update_info.has_update:
+                        version_str = f"{local_ver} → **{update_info.latest_version}** 🆕"
+                    else:
+                        version_str = f"{local_ver} (最新)"
 
                 homepage_link = f"[主页]({font_info.homepage})" if font_info.homepage else "-"
                 download_link = f"[下载]({font_info.download})" if font_info.download else "-"
 
                 lines.append(
-                    f"| {font_info.name} | {font_info.license} | "
+                    f"| {font_info.name} | {version_str} | {font_info.license} | "
                     f"{font_info.description} | {homepage_link} / {download_link} |"
                 )
 
