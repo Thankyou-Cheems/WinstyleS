@@ -17,7 +17,7 @@ class WSSApp(ctk.CTk):
         super().__init__()
         
         # 窗口配置
-        self.title("WinStyles")
+        self.title("WinstyleS")
         self.geometry("900x600")
         self.minsize(800, 500)
         
@@ -68,7 +68,7 @@ class WSSApp(ctk.CTk):
         # 欢迎页面
         self.welcome_label = ctk.CTkLabel(
             self.main_frame,
-            text="欢迎使用 WinStyles",
+            text="欢迎使用 WinstyleS",
             font=ctk.CTkFont(size=28, weight="bold"),
         )
         

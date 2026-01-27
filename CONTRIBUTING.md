@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你对 WinStyles 项目的关注！欢迎提交 Issue 和 Pull Request。
+感谢你对 WinstyleS 项目的关注！欢迎提交 Issue 和 Pull Request。
 
 ## 🚀 开发环境设置
 
