@@ -64,7 +64,6 @@ class StyleEngine:
         # VS Code 扫描器
         self.register_scanner(VSCodeScanner(registry, fs))
 
-
     def _load_defaults(self) -> None:
         """加载 Windows 默认值数据库"""
         defaults_dir = Path(__file__).resolve().parents[3] / "data" / "defaults"

@@ -135,9 +135,7 @@ class CursorScanner(BaseScanner):
         """应用鼠标指针设置"""
         try:
             if item.key == "cursor.scheme":
-                self._registry.set_value(
-                    f"HKCU\\{self.CURSORS_PATH}", "", item.current_value
-                )
+                self._registry.set_value(f"HKCU\\{self.CURSORS_PATH}", "", item.current_value)
                 return True
 
             if item.key.startswith("cursor."):

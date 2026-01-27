@@ -223,9 +223,7 @@ class ReportGenerator:
             categories[cat]["default"] += 1
 
         for cat, counts in sorted(categories.items()):
-            lines.append(
-                f"| {cat} | {counts['custom']} | {counts['diff']} | {counts['default']} |"
-            )
+            lines.append(f"| {cat} | {counts['custom']} | {counts['diff']} | {counts['default']} |")
 
         # 用户自定义配置
         if classified.user_customizations:
@@ -241,9 +239,7 @@ class ReportGenerator:
             for category, items in sorted(by_category.items()):
                 lines.append(f"\n### {category.title()}\n")
                 for item in items:
-                    default_str = (
-                        f" (默认: {item.default_value})" if item.default_value else ""
-                    )
+                    default_str = f" (默认: {item.default_value})" if item.default_value else ""
                     lines.append(f"- **{item.key}**: `{item.current_value}`{default_str}")
 
         # 检测到的开源字体
@@ -289,9 +285,7 @@ class ReportGenerator:
             fontlink_count = version_diff_count - len(real_diffs)
 
             for item in real_diffs:
-                default_str = (
-                    f" (默认库: {item.default_value})" if item.default_value else ""
-                )
+                default_str = f" (默认库: {item.default_value})" if item.default_value else ""
                 lines.append(f"- `{item.key}`: {item.current_value}{default_str}")
 
             if fontlink_count > 0:
