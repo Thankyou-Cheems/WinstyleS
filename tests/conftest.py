@@ -2,11 +2,12 @@
 测试配置和 fixtures
 """
 
-import pytest
-from typing import Generator
+from collections.abc import Generator
 
-from winstyles.infra.registry import MockRegistryAdapter
+import pytest
+
 from winstyles.infra.filesystem import MockFileSystemAdapter
+from winstyles.infra.registry import MockRegistryAdapter
 
 
 @pytest.fixture

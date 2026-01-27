@@ -6,8 +6,6 @@ Windows 系统 API 封装
 
 import ctypes
 from ctypes import wintypes
-from typing import Optional
-
 
 # Windows API 常量
 HWND_BROADCAST = 0xFFFF
@@ -22,12 +20,12 @@ APPLICATION_INSTALL = 0x0001
 
 class SystemAPI:
     """Windows 系统 API 封装类"""
-    
+
     @staticmethod
     def refresh_explorer() -> bool:
         """
         刷新 Explorer，使设置变更立即生效
-        
+
         Returns:
             是否成功
         """
@@ -44,15 +42,15 @@ class SystemAPI:
             return result != 0
         except Exception:
             return False
-    
+
     @staticmethod
     def install_font(font_path: str) -> bool:
         """
         安装字体
-        
+
         Args:
             font_path: 字体文件路径
-            
+
         Returns:
             是否成功
         """
@@ -74,15 +72,15 @@ class SystemAPI:
             return False
         except Exception:
             return False
-    
+
     @staticmethod
     def uninstall_font(font_path: str) -> bool:
         """
         卸载字体
-        
+
         Args:
             font_path: 字体文件路径
-            
+
         Returns:
             是否成功
         """
@@ -102,12 +100,12 @@ class SystemAPI:
             return False
         except Exception:
             return False
-    
+
     @staticmethod
     def is_admin() -> bool:
         """
         检查当前进程是否以管理员权限运行
-        
+
         Returns:
             是否是管理员
         """
@@ -115,24 +113,24 @@ class SystemAPI:
             return ctypes.windll.shell32.IsUserAnAdmin() != 0
         except Exception:
             return False
-    
+
     @staticmethod
-    def request_admin_elevation(script_path: Optional[str] = None) -> bool:
+    def request_admin_elevation(script_path: str | None = None) -> bool:
         """
         请求管理员权限提升
-        
+
         Args:
             script_path: 要以管理员权限运行的脚本路径
-            
+
         Returns:
             是否成功启动提升请求
         """
         try:
             import sys
-            
+
             if script_path is None:
                 script_path = sys.executable
-            
+
             # 使用 ShellExecuteW 以 "runas" 动词运行
             result = ctypes.windll.shell32.ShellExecuteW(
                 None,
@@ -142,17 +140,17 @@ class SystemAPI:
                 None,
                 1,  # SW_SHOWNORMAL
             )
-            
+
             # 返回值大于 32 表示成功
             return result > 32
         except Exception:
             return False
-    
+
     @staticmethod
     def get_windows_version() -> tuple[int, int, int]:
         """
         获取 Windows 版本号
-        
+
         Returns:
             (major, minor, build) 元组
         """
@@ -172,13 +170,13 @@ class SystemAPI:
                     ("wProductType", wintypes.BYTE),
                     ("wReserved", wintypes.BYTE),
                 ]
-            
+
             os_info = OSVERSIONINFOEXW()
             os_info.dwOSVersionInfoSize = ctypes.sizeof(OSVERSIONINFOEXW)
-            
+
             ntdll = ctypes.windll.ntdll
             ntdll.RtlGetVersion(ctypes.byref(os_info))
-            
+
             return (
                 os_info.dwMajorVersion,
                 os_info.dwMinorVersion,

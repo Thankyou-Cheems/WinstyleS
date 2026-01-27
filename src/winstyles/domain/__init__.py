@@ -3,14 +3,14 @@
 """
 
 from winstyles.domain.models import (
+    FontInfo,
+    Manifest,
+    RegistryEntry,
     ScannedItem,
     ScanResult,
-    Manifest,
     SourceSystem,
-    FontInfo,
-    RegistryEntry,
 )
-from winstyles.domain.types import ChangeType, Category
+from winstyles.domain.types import Category, ChangeType
 
 __all__ = [
     "ScannedItem",

@@ -2,10 +2,10 @@
 WinstyleS CLI 主入口 - 使用 Typer 构建命令行界面
 """
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
-from typing import Optional, List
-from pathlib import Path
 
 from winstyles import __version__
 
@@ -32,7 +32,7 @@ def version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None,
         "--version",
         "-V",
@@ -51,13 +51,13 @@ def main(
 
 @app.command()
 def scan(
-    category: Optional[List[str]] = typer.Option(
+    category: list[str] | None = typer.Option(
         None,
         "--category",
         "-c",
         help="指定扫描类别 (可多选): fonts, terminal, theme, vscode, browser, all",
     ),
-    output: Optional[Path] = typer.Option(
+    output: Path | None = typer.Option(
         None,
         "--output",
         "-o",
@@ -97,7 +97,7 @@ def export(
         ...,
         help="输出路径 (目录或.zip文件)",
     ),
-    category: Optional[List[str]] = typer.Option(
+    category: list[str] | None = typer.Option(
         None,
         "--category",
         "-c",
