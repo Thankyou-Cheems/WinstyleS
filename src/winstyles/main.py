@@ -114,7 +114,7 @@ def scan(
 
     if output:
         _write_scan_output(result, items, output, format)
-        console.print(f"[green]✅ 扫描结果已写入: {output}[/green]")
+        console.print(f"[green]扫描结果已写入: {output}[/green]")
         return
 
     _print_scan_output(result, items, format)
@@ -144,8 +144,21 @@ def export(
     将扫描到的配置和资源文件打包导出。
     """
     console.print(f"[bold blue]导出配置到: {output_path}[/bold blue]")
-    # TODO: 实现导出逻辑
-    console.print("[yellow]⚠️ 导出功能正在开发中...[/yellow]")
+
+    normalized_categories: list[str] | None = None
+    if category:
+        normalized = [c.strip().lower() for c in category if c.strip()]
+        if "all" not in normalized:
+            normalized_categories = normalized
+
+    engine = StyleEngine()
+    result = engine.scan_all(categories=normalized_categories)
+    if not include_defaults:
+        result = _filter_scan_result(result, keep_defaults=False)
+
+    manifest = engine.export_package(result, output_path, include_assets=True)
+    console.print(f"[green]导出完成: {output_path}[/green]")
+    console.print(f"[green]清单: {manifest.schema_version}[/green]")
 
 
 @app.command("import")
@@ -171,8 +184,23 @@ def import_config(
     从配置包还原个性化设置。
     """
     console.print(f"[bold blue]导入配置从: {input_path}[/bold blue]")
-    # TODO: 实现导入逻辑
-    console.print("[yellow]⚠️ 导入功能正在开发中...[/yellow]")
+
+    engine = StyleEngine()
+    summary = engine.import_package(
+        input_path,
+        dry_run=dry_run,
+        create_restore_point=not skip_restore_point,
+    )
+
+    table = Table(title="Import Summary")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Count", style="green")
+    for key in ["total", "applied", "failed", "skipped"]:
+        table.add_row(key, str(summary.get(key, 0)))
+    console.print(table)
+
+    if dry_run:
+        console.print("[yellow]Dry-run: 未应用任何更改[/yellow]")
 
 
 @app.command()
@@ -185,7 +213,7 @@ def diff(
     """
     console.print(f"[bold blue]对比配置包: {package1} vs {package2}[/bold blue]")
     # TODO: 实现对比逻辑
-    console.print("[yellow]⚠️ 对比功能正在开发中...[/yellow]")
+    console.print("[yellow]对比功能正在开发中...[/yellow]")
 
 
 @app.command()
@@ -197,7 +225,7 @@ def inspect(
     """
     console.print(f"[bold blue]检视配置包: {package_path}[/bold blue]")
     # TODO: 实现检视逻辑
-    console.print("[yellow]⚠️ 检视功能正在开发中...[/yellow]")
+    console.print("[yellow]检视功能正在开发中...[/yellow]")
 
 
 @app.command()
@@ -209,7 +237,7 @@ def restore() -> None:
     """
     console.print("[bold blue]准备回滚...[/bold blue]")
     # TODO: 实现回滚逻辑
-    console.print("[yellow]⚠️ 回滚功能正在开发中...[/yellow]")
+    console.print("[yellow]回滚功能正在开发中...[/yellow]")
 
 
 def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:
@@ -339,6 +367,23 @@ def _print_scan_summary(result: ScanResult, items: list[ScannedItem]) -> None:
         for change, count in sorted(change_counts.items()):
             table.add_row(change, str(count))
         console.print(table)
+
+
+def _filter_scan_result(result: ScanResult, keep_defaults: bool) -> ScanResult:
+    if keep_defaults:
+        return result
+    filtered_items = [item for item in result.items if item.change_type.value != "default"]
+    summary: dict[str, int] = {}
+    for item in filtered_items:
+        summary[item.category] = summary.get(item.category, 0) + 1
+    return ScanResult(
+        scan_id=result.scan_id,
+        scan_time=result.scan_time,
+        os_version=result.os_version,
+        items=filtered_items,
+        summary=summary,
+        duration_ms=result.duration_ms,
+    )
 
 
 if __name__ == "__main__":

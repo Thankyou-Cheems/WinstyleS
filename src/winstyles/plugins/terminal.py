@@ -205,5 +205,10 @@ class PowerShellProfileScanner(BaseScanner):
 
     def apply(self, item: ScannedItem) -> bool:
         """应用 PowerShell Profile"""
-        # TODO: 实现应用逻辑
-        return False
+        try:
+            if not isinstance(item.current_value, str):
+                return False
+            self._fs.write_text(item.source_path, item.current_value, encoding="utf-8")
+            return True
+        except Exception:
+            return False

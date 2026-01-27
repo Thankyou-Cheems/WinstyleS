@@ -5,13 +5,20 @@ StyleEngine - 核心引擎，负责调度扫描器和管理工作流
 from __future__ import annotations
 
 import json
+import os
+import platform
+import shutil
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import Any
 
 from winstyles.core.analyzer import DiffAnalyzer
-from winstyles.domain.models import Manifest, ScannedItem, ScanResult
+from winstyles.domain.models import ExportOptions, Manifest, ScannedItem, ScanResult, SourceSystem
 from winstyles.infra.filesystem import WindowsFileSystemAdapter
 from winstyles.infra.registry import WindowsRegistryAdapter
+from winstyles.infra.restore import RestorePointManager
+from winstyles.infra.system import SystemAPI
 from winstyles.plugins.base import BaseScanner
 from winstyles.plugins.fonts import FontLinkScanner, FontSubstitutesScanner
 from winstyles.plugins.terminal import PowerShellProfileScanner, WindowsTerminalScanner
@@ -168,15 +175,31 @@ class StyleEngine:
         Returns:
             Manifest: 导出包的清单
         """
-        # TODO: 实现导出逻辑
-        raise NotImplementedError("Export not implemented yet")
+        output_path = Path(output_path)
+        if output_path.suffix.lower() == ".zip":
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                output_dir = Path(tmp_dir)
+                manifest = self._write_package(
+                    output_dir,
+                    scan_result=scan_result,
+                    include_assets=include_assets,
+                )
+                self._zip_dir(output_dir, output_path)
+                return manifest
+
+        output_path.mkdir(parents=True, exist_ok=True)
+        return self._write_package(
+            output_path,
+            scan_result=scan_result,
+            include_assets=include_assets,
+        )
 
     def import_package(
         self,
         package_path: Path,
         dry_run: bool = False,
         create_restore_point: bool = True,
-    ) -> None:
+    ) -> dict[str, int]:
         """
         导入配置包
 
@@ -185,5 +208,173 @@ class StyleEngine:
             dry_run: 仅预览，不实际应用
             create_restore_point: 是否创建系统还原点
         """
-        # TODO: 实现导入逻辑
-        raise NotImplementedError("Import not implemented yet")
+        package_path = Path(package_path)
+        if package_path.suffix.lower() == ".zip":
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                output_dir = Path(tmp_dir)
+                with zipfile.ZipFile(package_path, "r") as zip_ref:
+                    zip_ref.extractall(output_dir)
+                return self._import_from_dir(
+                    output_dir,
+                    dry_run=dry_run,
+                    create_restore_point=create_restore_point,
+                )
+
+        return self._import_from_dir(
+            package_path,
+            dry_run=dry_run,
+            create_restore_point=create_restore_point,
+        )
+
+    def _write_package(
+        self,
+        output_dir: Path,
+        scan_result: ScanResult,
+        include_assets: bool,
+    ) -> Manifest:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        assets_dir = output_dir / "assets"
+
+        if include_assets:
+            assets_dir.mkdir(parents=True, exist_ok=True)
+
+        source_system = self._build_source_system()
+        export_options = self._build_export_options(scan_result)
+
+        manifest = Manifest(
+            source_system=source_system,
+            export_options=export_options,
+        )
+
+        manifest_path = output_dir / "manifest.json"
+        manifest_path.write_text(
+            json.dumps(
+                manifest.model_dump(mode="json", by_alias=True),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        scan_path = output_dir / "scan.json"
+        scan_path.write_text(
+            json.dumps(scan_result.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        if include_assets:
+            self._export_assets(scan_result, assets_dir)
+
+        return manifest
+
+    def _export_assets(self, scan_result: ScanResult, assets_dir: Path) -> None:
+        for item in scan_result.items:
+            for file in item.associated_files:
+                if not file.exists:
+                    continue
+                src_path = Path(file.path)
+                if not src_path.exists():
+                    continue
+                dest_dir = assets_dir / item.category
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                dest_path = dest_dir / src_path.name
+                if dest_path.exists():
+                    dest_path = dest_dir / f"{src_path.stem}_{abs(hash(src_path))}{src_path.suffix}"
+                shutil.copy2(src_path, dest_path)
+
+    def _zip_dir(self, source_dir: Path, output_path: Path) -> None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zip_ref:
+            for file_path in source_dir.rglob("*"):
+                if file_path.is_file():
+                    zip_ref.write(file_path, file_path.relative_to(source_dir))
+
+    def _import_from_dir(
+        self,
+        package_dir: Path,
+        dry_run: bool,
+        create_restore_point: bool,
+    ) -> dict[str, int]:
+        scan_path = package_dir / "scan.json"
+        if not scan_path.exists():
+            return {"total": 0, "applied": 0, "failed": 0, "skipped": 0}
+
+        scan_data = json.loads(scan_path.read_text(encoding="utf-8"))
+        scan_result = ScanResult.model_validate(scan_data)
+
+        if dry_run:
+            return {
+                "total": len(scan_result.items),
+                "applied": 0,
+                "failed": 0,
+                "skipped": len(scan_result.items),
+            }
+
+        if create_restore_point:
+            restore_manager = RestorePointManager()
+            restore_manager.create_restore_point()
+
+        applied = 0
+        failed = 0
+        skipped = 0
+
+        for item in scan_result.items:
+            scanner = self._find_scanner_for_category(item.category)
+            if scanner is None:
+                skipped += 1
+                continue
+            try:
+                if scanner.apply(item):
+                    applied += 1
+                else:
+                    failed += 1
+            except Exception:
+                failed += 1
+
+        return {
+            "total": len(scan_result.items),
+            "applied": applied,
+            "failed": failed,
+            "skipped": skipped,
+        }
+
+    def _find_scanner_for_category(self, category: str) -> BaseScanner | None:
+        for scanner in self._scanners:
+            if scanner.category == category:
+                return scanner
+        return None
+
+    def _build_source_system(self) -> SourceSystem:
+        major, minor, build = SystemAPI.get_windows_version()
+        os_name = platform.system() or "Windows"
+        version = platform.release() or ""
+        if self._defaults_os_version:
+            if self._defaults_os_version.startswith("Windows "):
+                version = self._defaults_os_version.replace("Windows ", "").strip()
+            else:
+                version = self._defaults_os_version
+
+        hostname = platform.node() or os.environ.get("COMPUTERNAME", "")
+        try:
+            username = os.getlogin()
+        except OSError:
+            username = os.environ.get("USERNAME", "")
+
+        return SourceSystem(
+            os=os_name,
+            version=version,
+            build=str(build if build else ""),
+            hostname=hostname,
+            username=username,
+        )
+
+    def _build_export_options(self, scan_result: ScanResult) -> ExportOptions:
+        categories = {item.category for item in scan_result.items}
+        return ExportOptions(
+            include_fonts="fonts" in categories,
+            include_wallpapers="wallpaper" in categories,
+            include_cursors="cursor" in categories,
+            include_terminal="terminal" in categories,
+            include_vscode="vscode" in categories,
+            include_browser="browser" in categories,
+        )
