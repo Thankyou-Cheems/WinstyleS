@@ -11,7 +11,7 @@ from rich.table import Table
 
 from winstyles import __version__
 from winstyles.core.engine import StyleEngine
-from winstyles.domain.models import ScannedItem, ScanResult
+from winstyles.domain.models import Manifest, ScannedItem, ScanResult
 
 # 创建 Typer 应用
 app = typer.Typer(
@@ -207,25 +207,92 @@ def import_config(
 def diff(
     package1: Path = typer.Argument(..., help="第一个配置包"),
     package2: Path = typer.Argument(..., help="第二个配置包"),
+    format: str = typer.Option(
+        "table",
+        "--format",
+        "-f",
+        help="输出格式: table, json, yaml",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="输出结果到文件",
+    ),
+    show_all: bool = typer.Option(
+        False,
+        "--all",
+        help="显示未变化项",
+    ),
 ) -> None:
     """
     🔄 对比两个配置包的差异
     """
     console.print(f"[bold blue]对比配置包: {package1} vs {package2}[/bold blue]")
-    # TODO: 实现对比逻辑
-    console.print("[yellow]对比功能正在开发中...[/yellow]")
+
+    if format not in {"table", "json", "yaml"}:
+        console.print(f"[red]不支持的输出格式: {format}[/red]")
+        raise typer.Exit(code=1)
+
+    engine = StyleEngine()
+    diff_result = engine.diff_packages(package1, package2)
+
+    if "error" in diff_result:
+        console.print(f"[red]{diff_result['error']}[/red]")
+        raise typer.Exit(code=1)
+
+    items = diff_result.get("items", [])
+    if not show_all:
+        items = [item for item in items if item.get("change") != "unchanged"]
+        diff_result = {**diff_result, "items": items}
+
+    if output:
+        _write_payload(output, diff_result, format)
+        console.print(f"[green]结果已写入: {output}[/green]")
+        return
+
+    _print_diff_output(diff_result, format)
 
 
 @app.command()
 def inspect(
     package_path: Path = typer.Argument(..., help="配置包路径"),
+    format: str = typer.Option(
+        "table",
+        "--format",
+        "-f",
+        help="输出格式: table, json, yaml",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="输出结果到文件",
+    ),
 ) -> None:
     """
     🔎 检视配置包内容
     """
     console.print(f"[bold blue]检视配置包: {package_path}[/bold blue]")
-    # TODO: 实现检视逻辑
-    console.print("[yellow]检视功能正在开发中...[/yellow]")
+
+    if format not in {"table", "json", "yaml"}:
+        console.print(f"[red]不支持的输出格式: {format}[/red]")
+        raise typer.Exit(code=1)
+
+    engine = StyleEngine()
+    manifest = engine.load_manifest(package_path)
+    scan = engine.load_scan_result(package_path)
+    if manifest is None:
+        console.print("[red]manifest.json not found[/red]")
+        raise typer.Exit(code=1)
+
+    payload = _inspect_payload(manifest, scan)
+    if output:
+        _write_payload(output, payload, format)
+        console.print(f"[green]结果已写入: {output}[/green]")
+        return
+
+    _print_inspect_output(payload, format)
 
 
 @app.command()
@@ -384,6 +451,105 @@ def _filter_scan_result(result: ScanResult, keep_defaults: bool) -> ScanResult:
         summary=summary,
         duration_ms=result.duration_ms,
     )
+
+
+def _print_diff_output(payload: dict[str, object], fmt: str) -> None:
+    if fmt == "json":
+        console.print_json(data=payload)
+        return
+    if fmt == "yaml":
+        _print_yaml(payload)
+        return
+
+    table = Table(title="Package Diff")
+    table.add_column("Category", style="cyan")
+    table.add_column("Key", style="white")
+    table.add_column("Change", style="magenta")
+    table.add_column("Before", style="yellow")
+    table.add_column("After", style="green")
+
+    for item in payload.get("items", []):
+        table.add_row(
+            str(item.get("category", "")),
+            str(item.get("key", "")),
+            str(item.get("change", "")),
+            _shorten_value(item.get("before")),
+            _shorten_value(item.get("after")),
+        )
+
+    console.print(table)
+
+
+def _print_inspect_output(payload: dict[str, object], fmt: str) -> None:
+    if fmt == "json":
+        console.print_json(data=payload)
+        return
+    if fmt == "yaml":
+        _print_yaml(payload)
+        return
+
+    meta = Table(title="Package Info")
+    meta.add_column("Field", style="cyan")
+    meta.add_column("Value", style="green")
+    for key in [
+        "schema_version",
+        "version",
+        "created_at",
+        "created_by",
+        "source_os",
+        "source_version",
+        "source_build",
+        "source_hostname",
+        "source_username",
+    ]:
+        if key in payload:
+            meta.add_row(key, str(payload[key]))
+    console.print(meta)
+
+    options = payload.get("export_options", {})
+    if isinstance(options, dict) and options:
+        table = Table(title="Export Options")
+        table.add_column("Option", style="cyan")
+        table.add_column("Enabled", style="green")
+        for key, value in options.items():
+            table.add_row(str(key), str(value))
+        console.print(table)
+
+    summary = payload.get("scan_summary", {})
+    if isinstance(summary, dict) and summary:
+        table = Table(title="Scan Summary")
+        table.add_column("Category", style="cyan")
+        table.add_column("Count", style="green")
+        for key, value in sorted(summary.items()):
+            table.add_row(str(key), str(value))
+        console.print(table)
+
+
+def _inspect_payload(manifest: "Manifest", scan: ScanResult | None) -> dict[str, object]:
+    return {
+        "schema_version": manifest.schema_version,
+        "version": manifest.version,
+        "created_at": manifest.created_at.isoformat(),
+        "created_by": manifest.created_by,
+        "source_os": manifest.source_system.os,
+        "source_version": manifest.source_system.version,
+        "source_build": manifest.source_system.build,
+        "source_hostname": manifest.source_system.hostname,
+        "source_username": manifest.source_system.username,
+        "export_options": manifest.export_options.model_dump(mode="json"),
+        "scan_summary": scan.summary if scan else {},
+        "scan_count": len(scan.items) if scan else 0,
+    }
+
+
+def _write_payload(output_path: Path, payload: dict[str, object], fmt: str) -> None:
+    if fmt == "yaml":
+        _write_yaml(output_path, payload)
+        return
+    if fmt == "table":
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

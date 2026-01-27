@@ -338,6 +338,92 @@ class StyleEngine:
             "skipped": skipped,
         }
 
+    def load_scan_result(self, package_path: Path) -> ScanResult | None:
+        data = self._read_json_from_package(Path(package_path), "scan.json")
+        if data is None:
+            return None
+        return ScanResult.model_validate(data)
+
+    def load_manifest(self, package_path: Path) -> Manifest | None:
+        data = self._read_json_from_package(Path(package_path), "manifest.json")
+        if data is None:
+            return None
+        return Manifest.model_validate(data)
+
+    def _read_json_from_package(self, package_path: Path, filename: str) -> dict[str, Any] | None:
+        if package_path.suffix.lower() == ".zip":
+            try:
+                with zipfile.ZipFile(package_path, "r") as zip_ref:
+                    if filename not in zip_ref.namelist():
+                        return None
+                    with zip_ref.open(filename) as handle:
+                        return json.loads(handle.read().decode("utf-8"))
+            except (OSError, KeyError, json.JSONDecodeError):
+                return None
+
+        file_path = package_path / filename
+        if not file_path.exists():
+            return None
+        try:
+            return json.loads(file_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    def diff_packages(self, package_a: Path, package_b: Path) -> dict[str, Any]:
+        scan_a = self.load_scan_result(package_a)
+        scan_b = self.load_scan_result(package_b)
+        if scan_a is None or scan_b is None:
+            return {
+                "error": "scan.json not found",
+                "package_a": str(package_a),
+                "package_b": str(package_b),
+            }
+
+        items_a = {(item.category, item.key): item for item in scan_a.items}
+        items_b = {(item.category, item.key): item for item in scan_b.items}
+
+        all_keys = sorted(set(items_a) | set(items_b))
+        diff_items: list[dict[str, Any]] = []
+        counts = {"added": 0, "removed": 0, "modified": 0, "unchanged": 0}
+
+        for category, key in all_keys:
+            item_a = items_a.get((category, key))
+            item_b = items_b.get((category, key))
+            if item_a is None:
+                change = "added"
+                before = None
+                after = item_b.current_value if item_b else None
+            elif item_b is None:
+                change = "removed"
+                before = item_a.current_value
+                after = None
+            else:
+                before = item_a.current_value
+                after = item_b.current_value
+                change = "unchanged" if before == after else "modified"
+
+            counts[change] += 1
+            diff_items.append(
+                {
+                    "category": category,
+                    "key": key,
+                    "change": change,
+                    "before": before,
+                    "after": after,
+                }
+            )
+
+        return {
+            "package_a": str(package_a),
+            "package_b": str(package_b),
+            "total": len(all_keys),
+            "added": counts["added"],
+            "removed": counts["removed"],
+            "modified": counts["modified"],
+            "unchanged": counts["unchanged"],
+            "items": diff_items,
+        }
+
     def _find_scanner_for_category(self, category: str) -> BaseScanner | None:
         for scanner in self._scanners:
             if scanner.category == category:

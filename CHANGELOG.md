@@ -9,6 +9,7 @@
 - CLI 命令框架 (scan, export, import, diff, inspect, restore)
 - 扫描 MVP：支持 scan 输出与默认值对比
 - 导出/导入 MVP：生成配置包并支持 dry-run 导入
+- diff/inspect：支持配置包对比与检视
 - 核心数据模型 (ScannedItem, ScanResult, Manifest)
 - 扫描器插件系统
 - 字体扫描器骨架 (FontSubstitutes, FontLink)
