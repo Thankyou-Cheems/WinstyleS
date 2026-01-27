@@ -2,11 +2,19 @@
 StyleEngine - 核心引擎，负责调度扫描器和管理工作流
 """
 
+from __future__ import annotations
+
+import json
 from pathlib import Path
 from typing import Any
 
+from winstyles.core.analyzer import DiffAnalyzer
 from winstyles.domain.models import Manifest, ScannedItem, ScanResult
+from winstyles.infra.filesystem import WindowsFileSystemAdapter
+from winstyles.infra.registry import WindowsRegistryAdapter
 from winstyles.plugins.base import BaseScanner
+from winstyles.plugins.fonts import FontLinkScanner, FontSubstitutesScanner
+from winstyles.plugins.terminal import PowerShellProfileScanner, WindowsTerminalScanner
 
 
 class StyleEngine:
@@ -27,13 +35,67 @@ class StyleEngine:
 
     def _load_plugins(self) -> None:
         """动态加载所有扫描器插件"""
-        # TODO: 实现插件自动发现和加载
-        pass
+        registry = WindowsRegistryAdapter()
+        fs = WindowsFileSystemAdapter()
+        self.register_scanner(FontSubstitutesScanner(registry, fs))
+        self.register_scanner(FontLinkScanner(registry, fs))
+        self.register_scanner(WindowsTerminalScanner(registry, fs))
+        self.register_scanner(PowerShellProfileScanner(registry, fs))
 
     def _load_defaults(self) -> None:
         """加载 Windows 默认值数据库"""
-        # TODO: 从 data/defaults/ 加载默认值 JSON
-        pass
+        defaults_dir = Path(__file__).resolve().parents[3] / "data" / "defaults"
+        if not defaults_dir.exists():
+            self._defaults_db = {}
+            return
+
+        candidates = sorted(defaults_dir.glob("*.json"))
+        if not candidates:
+            self._defaults_db = {}
+            return
+
+        default_file = candidates[0]
+        try:
+            raw = json.loads(default_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            self._defaults_db = {}
+            return
+
+        self._defaults_db = self._flatten_defaults(raw)
+
+    def _flatten_defaults(self, raw: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        """将默认值 JSON 规整为 {category: {key: value}} 结构"""
+        defaults: dict[str, dict[str, Any]] = {}
+
+        fonts = raw.get("fonts", {})
+        if isinstance(fonts, dict):
+            font_defaults: dict[str, Any] = {}
+            substitutes = fonts.get("substitutes", {})
+            if isinstance(substitutes, dict):
+                font_defaults.update(substitutes)
+            font_link = fonts.get("font_link", {})
+            if isinstance(font_link, dict):
+                font_defaults.update(font_link)
+            if font_defaults:
+                defaults["fonts"] = font_defaults
+
+        terminal = raw.get("terminal", {})
+        if isinstance(terminal, dict):
+            wt = terminal.get("windows_terminal", {})
+            if isinstance(wt, dict):
+                terminal_defaults: dict[str, Any] = {}
+                key_map = {
+                    "default_profile": "windowsTerminal.defaultProfile",
+                    "theme": "windowsTerminal.theme",
+                    "use_acrylic": "windowsTerminal.useAcrylicInTabRow",
+                }
+                for src_key, dest_key in key_map.items():
+                    if src_key in wt:
+                        terminal_defaults[dest_key] = wt[src_key]
+                if terminal_defaults:
+                    defaults["terminal"] = terminal_defaults
+
+        return defaults
 
     def register_scanner(self, scanner: BaseScanner) -> None:
         """注册一个扫描器"""
@@ -60,10 +122,14 @@ class StyleEngine:
                     # TODO: 使用 logger 记录错误
                     print(f"Scanner {scanner.name} failed: {e}")
 
+        analyzed_items = (
+            DiffAnalyzer.compare(items, self._defaults_db) if self._defaults_db else items
+        )
+
         return ScanResult(
             os_version="",
-            items=items,
-            summary=self._generate_summary(items),
+            items=analyzed_items,
+            summary=self._generate_summary(analyzed_items),
             duration_ms=None,
         )
 

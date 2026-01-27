@@ -2,12 +2,16 @@
 WinstyleS CLI 主入口 - 使用 Typer 构建命令行界面
 """
 
+import json
 from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from winstyles import __version__
+from winstyles.core.engine import StyleEngine
+from winstyles.domain.models import ScannedItem, ScanResult
 
 # 创建 Typer 应用
 app = typer.Typer(
@@ -86,9 +90,31 @@ def scan(
 
     与 Windows 默认值对比后输出报告。
     """
-    console.print("[bold blue]🔍 开始扫描系统配置...[/bold blue]")
-    # TODO: 实现扫描逻辑
-    console.print("[yellow]⚠️ 扫描功能正在开发中...[/yellow]")
+    console.print("[bold blue]开始扫描系统配置...[/bold blue]")
+
+    normalized_categories: list[str] | None = None
+    if category:
+        normalized = [c.strip().lower() for c in category if c.strip()]
+        if "all" not in normalized:
+            normalized_categories = normalized
+
+    engine = StyleEngine()
+    result = engine.scan_all(categories=normalized_categories)
+
+    items = result.items
+    if modified_only:
+        items = [item for item in items if item.change_type.value != "default"]
+
+    if format not in {"table", "json", "yaml"}:
+        console.print(f"[red]不支持的输出格式: {format}[/red]")
+        raise typer.Exit(code=1)
+
+    if output:
+        _write_scan_output(result, items, output, format)
+        console.print(f"[green]✅ 扫描结果已写入: {output}[/green]")
+        return
+
+    _print_scan_output(result, items, format)
 
 
 @app.command()
@@ -114,7 +140,7 @@ def export(
 
     将扫描到的配置和资源文件打包导出。
     """
-    console.print(f"[bold blue]📤 导出配置到: {output_path}[/bold blue]")
+    console.print(f"[bold blue]导出配置到: {output_path}[/bold blue]")
     # TODO: 实现导出逻辑
     console.print("[yellow]⚠️ 导出功能正在开发中...[/yellow]")
 
@@ -141,7 +167,7 @@ def import_config(
 
     从配置包还原个性化设置。
     """
-    console.print(f"[bold blue]📥 导入配置从: {input_path}[/bold blue]")
+    console.print(f"[bold blue]导入配置从: {input_path}[/bold blue]")
     # TODO: 实现导入逻辑
     console.print("[yellow]⚠️ 导入功能正在开发中...[/yellow]")
 
@@ -154,7 +180,7 @@ def diff(
     """
     🔄 对比两个配置包的差异
     """
-    console.print(f"[bold blue]🔄 对比配置包: {package1} vs {package2}[/bold blue]")
+    console.print(f"[bold blue]对比配置包: {package1} vs {package2}[/bold blue]")
     # TODO: 实现对比逻辑
     console.print("[yellow]⚠️ 对比功能正在开发中...[/yellow]")
 
@@ -166,7 +192,7 @@ def inspect(
     """
     🔎 检视配置包内容
     """
-    console.print(f"[bold blue]🔎 检视配置包: {package_path}[/bold blue]")
+    console.print(f"[bold blue]检视配置包: {package_path}[/bold blue]")
     # TODO: 实现检视逻辑
     console.print("[yellow]⚠️ 检视功能正在开发中...[/yellow]")
 
@@ -178,9 +204,111 @@ def restore() -> None:
 
     使用 WinstyleS 创建的备份进行恢复。
     """
-    console.print("[bold blue]⏪ 准备回滚...[/bold blue]")
+    console.print("[bold blue]准备回滚...[/bold blue]")
     # TODO: 实现回滚逻辑
     console.print("[yellow]⚠️ 回滚功能正在开发中...[/yellow]")
+
+
+def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:
+    if fmt == "json":
+        console.print_json(data=_scan_result_payload(result, items))
+        return
+    if fmt == "yaml":
+        _print_yaml(_scan_result_payload(result, items))
+        return
+
+    table = Table(title="WinstyleS Scan Result")
+    table.add_column("Category", style="cyan")
+    table.add_column("Key", style="white")
+    table.add_column("Current", style="green")
+    table.add_column("Default", style="yellow")
+    table.add_column("Change", style="magenta")
+    table.add_column("Source", style="blue")
+
+    for item in items:
+        table.add_row(
+            item.category,
+            item.key,
+            _shorten_value(item.current_value),
+            _shorten_value(item.default_value),
+            item.change_type.value,
+            item.source_path,
+        )
+
+    console.print(table)
+
+
+def _write_scan_output(
+    result: ScanResult,
+    items: list[ScannedItem],
+    output_path: Path,
+    fmt: str,
+) -> None:
+    payload = _scan_result_payload(result, items)
+    if fmt == "yaml":
+        _write_yaml(output_path, payload)
+        return
+    if fmt == "table":
+        output_path.write_text(_scan_table_text(items), encoding="utf-8")
+        return
+
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _scan_result_payload(result: ScanResult, items: list[ScannedItem]) -> dict[str, object]:
+    return {
+        "scan_id": result.scan_id,
+        "scan_time": result.scan_time.isoformat(),
+        "os_version": result.os_version,
+        "summary": result.summary,
+        "items": [item.model_dump(mode="json") for item in items],
+    }
+
+
+def _scan_table_text(items: list[ScannedItem]) -> str:
+    lines = ["Category\tKey\tCurrent\tDefault\tChange\tSource"]
+    for item in items:
+        lines.append(
+            "\t".join(
+                [
+                    item.category,
+                    item.key,
+                    _shorten_value(item.current_value),
+                    _shorten_value(item.default_value),
+                    item.change_type.value,
+                    item.source_path,
+                ]
+            )
+        )
+    return "\n".join(lines)
+
+
+def _shorten_value(value: object, max_len: int = 80) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
+
+
+def _print_yaml(payload: dict[str, object]) -> None:
+    try:
+        import yaml
+    except ModuleNotFoundError:
+        console.print("[red]YAML 输出需要安装 PyYAML: pip install pyyaml[/red]")
+        raise typer.Exit(code=1)
+    console.print(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False))
+
+
+def _write_yaml(output_path: Path, payload: dict[str, object]) -> None:
+    try:
+        import yaml
+    except ModuleNotFoundError:
+        raise typer.Exit(code=1)
+    output_path.write_text(
+        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":
