@@ -13,10 +13,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  
-  # PR 时只构建不发布（测试构建是否成功）
-  pull_request:
-    branches: [main]
 
 # 权限配置
 permissions:

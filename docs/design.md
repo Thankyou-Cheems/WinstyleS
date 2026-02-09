@@ -15,6 +15,7 @@ WinstyleS (Windows Style Sync) - Windows 个性化设置同步工具
 2. [扫描维度](#扫描维度)
 3. [数据结构](#数据结构)
 4. [CLI 接口](#cli-接口)
+5. [Web API 约定](#web-api-约定)
 
 ---
 # 扫描所有配置
@@ -39,3 +40,17 @@ winstyles import ./my-style.zip --skip-restore-point
 
 - [README.md](../README.md) - 项目概述
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - 贡献指南和架构说明
+
+---
+
+## Web API 约定
+
+Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
+
+- `POST /api/check_font_updates`
+  - 行为：执行真实字体扫描与更新检查，返回更新列表（不再返回固定空数组）
+
+- `POST /api/import_config`
+  - 输入方式 A：`{ "path": "C:\\...\\my-style.zip", "dryRun": true, "skipRestore": true }`
+  - 输入方式 B：`{ "fileName": "my-style.zip", "fileBase64": "<base64/data-url>", "dryRun": true, "skipRestore": true }`
+  - 行为：当传入 `fileBase64` 时，后端会写入临时 zip 再执行导入

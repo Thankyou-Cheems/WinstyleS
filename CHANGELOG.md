@@ -2,6 +2,19 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/)。
 
+## [Unreleased]
+
+### Fixed
+- 修复字体更新页面运行时异常：使用 `ScannedItem.current_value`，避免访问不存在字段
+- 修复开源字体模型与配置包字体模型重名冲突：新增 `OpenSourceFontInfo` 并替换相关引用
+- 修复 `winstyles report --open` 重复打开浏览器的问题
+- 修复 Web 模式 `check_font_updates` 固定返回空结果的问题，改为真实检查流程
+- 修复 Web 模式导入在浏览器仅有文件对象时无法导入的问题，新增 zip 上传导入通道
+- 修复版本显示不一致：`__version__` 与 `pyproject.toml` 版本对齐为 `0.2.0`
+
+### Changed
+- 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发
+
 ## [0.3.0] - 2026-01-27
 
 ### Added

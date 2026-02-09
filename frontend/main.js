@@ -601,6 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const importBtn = document.getElementById("importBtn");
   const importDryRunBtn = document.getElementById("importDryRunBtn");
+  let selectedImportFile = null;
 
   async function runImport(dryRun) {
     const btn = dryRun ? importDryRunBtn : importBtn;
@@ -611,23 +612,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const path = document.getElementById("importPath")?.value.trim() || "";
     const skipRestore = document.getElementById("importSkipRestore")?.checked || false;
+    const hasPath = path.length > 0;
+    const hasUpload = selectedImportFile !== null;
 
-    if (!path) {
-      outputTo("importOutput", "请输入配置包路径");
+    if (!hasPath && !hasUpload) {
+      outputTo("importOutput", "请输入配置包路径，或拖拽/选择一个 .zip 配置包");
       setStatus("请输入配置包路径", true);
       setButtonLoading(btn, false);
       return;
     }
 
     try {
+      const payload = { dryRun, skipRestore };
+      if (hasPath) {
+        payload.path = path;
+      } else if (selectedImportFile) {
+        payload.fileName = selectedImportFile.name;
+        payload.fileBase64 = selectedImportFile.base64;
+      }
+
       const result = await invokeOrWarn(
         "import_config",
-        { path, dryRun, skipRestore },
+        payload,
         "importOutput"
       );
 
       if (result !== null) {
-        outputTo("importOutput", result);
+        if (typeof result === "string") {
+          outputTo("importOutput", result);
+        } else {
+          outputTo("importOutput", JSON.stringify(result, null, 2));
+        }
         setStatus(`${statusPrefix}完成`);
       }
     } catch (err) {
@@ -763,6 +778,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const dropZone = document.getElementById("importDropZone");
   const importPath = document.getElementById("importPath");
 
+  async function readFileAsDataUrl(file) {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("读取文件失败"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function selectImportFile(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      setStatus("仅支持 .zip 配置包", true);
+      return;
+    }
+
+    try {
+      const base64 = await readFileAsDataUrl(file);
+      selectedImportFile = { name: file.name, base64 };
+      if (importPath) {
+        importPath.value = "";
+      }
+      setStatus(`已加载配置包: ${file.name}`);
+      outputTo("importOutput", `已加载: ${file.name}（将通过浏览器上传导入）`);
+    } catch (err) {
+      setStatus(`读取文件失败: ${err}`, true);
+    }
+  }
+
   if (dropZone && importPath) {
     dropZone.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -773,16 +817,13 @@ document.addEventListener("DOMContentLoaded", () => {
       dropZone.classList.remove("drag-over");
     });
 
-    dropZone.addEventListener("drop", (e) => {
+    dropZone.addEventListener("drop", async (e) => {
       e.preventDefault();
       dropZone.classList.remove("drag-over");
 
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
-        const file = files[0];
-        // In web mode, we can't get the full path, but we can show the filename
-        importPath.value = file.name;
-        setStatus(`已选择文件: ${file.name}`);
+        await selectImportFile(files[0]);
       }
     });
 
@@ -791,14 +832,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".zip";
-      input.onchange = (e) => {
+      input.onchange = async (e) => {
         const file = e.target.files?.[0];
         if (file) {
-          importPath.value = file.name;
-          setStatus(`已选择文件: ${file.name}`);
+          await selectImportFile(file);
         }
       };
       input.click();
+    });
+
+    importPath.addEventListener("input", () => {
+      if (importPath.value.trim()) {
+        selectedImportFile = null;
+      }
     });
   }
 

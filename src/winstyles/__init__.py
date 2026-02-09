@@ -5,5 +5,7 @@ WinstyleS - Windows 个性化设置同步工具
 并在其他设备上一键还原。
 """
 
-__version__ = "0.1.0"
+# Keep this aligned with pyproject.toml [project].version.
+__version__ = "0.2.0"
+
 __author__ = "Your Name"

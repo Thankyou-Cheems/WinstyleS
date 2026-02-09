@@ -1,10 +1,12 @@
 
+import base64
 import http.server
 import json
 import os
 import socketserver
 import subprocess
 import sys
+import tempfile
 import webbrowser
 from pathlib import Path
 
@@ -115,8 +117,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return self.run_cli_command(CMD_MAP["export_config"], payload,
                                       args_mapper=self.map_export_args)
         elif name == "import_config":
-            return self.run_cli_command(CMD_MAP["import_config"], payload,
-                                      args_mapper=self.map_import_args)
+            return self.run_import_command(payload)
         elif name == "generate_report":
             # Report usually returns text content
             args = [
@@ -125,8 +126,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return self.run_cli_command_raw(args)
 
         elif name == "check_font_updates":
-            # Not implemented in CLI yet, return empty list
-            return json.dumps([])
+            return self.check_font_updates()
 
         elif name == "open_output_folder":
             os.startfile(os.getcwd())
@@ -163,7 +163,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
                 return generator.generate_markdown()
 
         elif name == "check_font_updates":
-            return json.dumps([])
+            return self.check_font_updates()
 
         elif name == "open_output_folder":
             os.startfile(os.getcwd())
@@ -180,8 +180,19 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return json.dumps({"error": "Export not yet supported in packaged mode"})
 
         elif name == "import_config":
-            # TODO: Implement direct import
-            return json.dumps({"error": "Import not yet supported in packaged mode"})
+            temp_path = None
+            try:
+                package_path, temp_path = self.resolve_import_path(payload)
+                engine = get_engine()
+                summary = engine.import_package(
+                    Path(package_path),
+                    dry_run=bool(payload.get("dryRun")),
+                    create_restore_point=not bool(payload.get("skipRestore")),
+                )
+                return summary
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
 
         else:
             raise ValueError(f"Unknown command: {name}")
@@ -193,6 +204,97 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
     def run_cli_command_raw(self, cmd):
         return self.run_subprocess(cmd)
+
+    def run_import_command(self, payload):
+        temp_path = None
+        try:
+            package_path, temp_path = self.resolve_import_path(payload)
+            args = self.map_import_args({**payload, "path": package_path})
+            cmd = CMD_MAP["import_config"].copy()
+            cmd.extend(args)
+            return self.run_subprocess(cmd)
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def resolve_import_path(self, payload):
+        path = payload.get("path")
+        if path:
+            return path, None
+
+        file_name = payload.get("fileName", "import_package.zip")
+        file_b64 = payload.get("fileBase64")
+        if not file_b64:
+            raise ValueError("Path or uploaded file is required")
+
+        # Supports raw base64 and data URL formats.
+        encoded = file_b64.split(",", 1)[1] if "," in file_b64 else file_b64
+        data = base64.b64decode(encoded)
+
+        suffix = Path(file_name).suffix or ".zip"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_file.write(data)
+            return temp_file.name, temp_file.name
+
+    def check_font_updates(self):
+        from winstyles.core.update_checker import UpdateChecker
+        from winstyles.domain.models import OpenSourceFontInfo
+        from winstyles.utils.font_utils import find_font_path, get_font_version
+
+        engine = get_engine()
+        result = engine.scan_all(categories=["fonts"])
+
+        checker = UpdateChecker()
+        db = checker.fetch_remote_db()
+        if not db:
+            return []
+
+        updates = []
+        fonts_info = db.get("fonts", [])
+        for item in result.items:
+            if item.category != "fonts":
+                continue
+
+            font_name = str(item.current_value)
+            for font_info in fonts_info:
+                patterns = font_info.get("patterns", [])
+                name = font_info.get("name", "")
+                matched = False
+
+                for pattern in patterns:
+                    pattern_lower = pattern.lower().replace("*", "")
+                    if pattern_lower in font_name.lower():
+                        matched = True
+                        break
+
+                if not matched:
+                    continue
+
+                font_path = find_font_path(font_name)
+                local_version = get_font_version(font_path) if font_path else None
+
+                os_font = OpenSourceFontInfo(
+                    name=name,
+                    patterns=patterns,
+                    homepage=font_info.get("homepage", ""),
+                    download=font_info.get("download", ""),
+                    license=font_info.get("license", ""),
+                    description=font_info.get("description", ""),
+                )
+                update_info = checker.check_font_update(os_font, local_version)
+                if update_info:
+                    updates.append(
+                        {
+                            "name": name,
+                            "current_version": update_info.current_version,
+                            "latest_version": update_info.latest_version,
+                            "download_url": update_info.download_url,
+                            "has_update": update_info.has_update,
+                        }
+                    )
+                break
+
+        return updates
 
     def run_subprocess(self, cmd):
         print(f"Executing: {' '.join(cmd)}")

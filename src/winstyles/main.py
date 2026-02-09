@@ -456,8 +456,6 @@ def report(
 
             console.print(f"[green]报告临时文件: {temp_path}[/green]")
             webbrowser.open(temp_path)
-
-            webbrowser.open(temp_path)
             console.print("[green]报告已在浏览器中打开[/green]")
         else:
             # 直接打印 Markdown
