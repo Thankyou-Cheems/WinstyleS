@@ -120,8 +120,8 @@ def scan(
         return
 
     if format == "json" and not verbose:
-         _print_scan_output(result, items, format)
-         return
+        _print_scan_output(result, items, format)
+        return
 
     _print_scan_output(result, items, format)
 
@@ -143,6 +143,11 @@ def export(
         "--include-defaults",
         help="是否包含未修改的默认配置",
     ),
+    include_font_files: bool = typer.Option(
+        False,
+        "--include-font-files",
+        help="是否包含字体文件资产（.ttf/.otf/.ttc 等）",
+    ),
 ) -> None:
     """
     📤 导出配置包
@@ -162,7 +167,12 @@ def export(
     if not include_defaults:
         result = _filter_scan_result(result, keep_defaults=False)
 
-    manifest = engine.export_package(result, output_path, include_assets=True)
+    manifest = engine.export_package(
+        result,
+        output_path,
+        include_assets=True,
+        include_font_files=include_font_files,
+    )
     console.print(f"[green]导出完成: {output_path}[/green]")
     console.print(f"[green]清单: {manifest.schema_version}[/green]")
 
@@ -391,6 +401,11 @@ def report(
         "--open",
         help="生成后在浏览器中打开",
     ),
+    check_updates: bool = typer.Option(
+        True,
+        "--check-updates/--no-check-updates",
+        help="是否检查字体更新（禁用可避免联网并提升速度）",
+    ),
 ) -> None:
     """
     📊 生成扫描报告
@@ -409,7 +424,7 @@ def report(
     engine = StyleEngine()
     scan_result = engine.scan_all(categories)
 
-    generator = ReportGenerator(scan_result)
+    generator = ReportGenerator(scan_result, check_updates=check_updates)
 
     if format.lower() == "html":
         content = generator.generate_html(embedded=is_web_request)
@@ -418,26 +433,23 @@ def report(
         content = generator.generate_markdown()
         default_ext = ".md"
 
-
-
     if output:
         output.write_text(content, encoding="utf-8")
         if not is_web_request:
-             console.print(f"[green]报告已保存至: {output}[/green]")
+            console.print(f"[green]报告已保存至: {output}[/green]")
 
         if open_browser:
             import webbrowser
 
             webbrowser.open(str(output.resolve()))
     else:
-        # If running in web mode (detected or just by lack of output path in some context)
-        # For simplicity, if no output is specified and we want text output, just print it.
-        # But wait, original logic was to use temp file if open_browser.
-
         if not open_browser:
-            # Assume stdout output desired (e.g. for Web UI)
-            # Use json dump to be safe with newlines or just print
-            print(json.dumps(content, ensure_ascii=False))
+            if is_web_request:
+                # Web mode expects a JSON string payload.
+                print(json.dumps(content, ensure_ascii=False))
+                return
+            # In CLI mode, avoid non-UTF8 console encoding issues by escaping non-ASCII.
+            print(json.dumps(content, ensure_ascii=True))
             return
 
         # 默认保存到临时文件并显示
@@ -480,6 +492,7 @@ def gui() -> None:
 def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:
     if fmt == "json":
         import json
+
         # Direct print for pipes
         print(json.dumps(_scan_result_payload(result, items), ensure_ascii=False))
         return
@@ -628,6 +641,7 @@ def _filter_scan_result(result: ScanResult, keep_defaults: bool) -> ScanResult:
 def _print_diff_output(payload: dict[str, object], fmt: str) -> None:
     if fmt == "json":
         import json
+
         print(json.dumps(payload, ensure_ascii=False))
         return
     if fmt == "yaml":
@@ -656,6 +670,7 @@ def _print_diff_output(payload: dict[str, object], fmt: str) -> None:
 def _print_inspect_output(payload: dict[str, object], fmt: str) -> None:
     if fmt == "json":
         import json
+
         print(json.dumps(payload, ensure_ascii=False))
         return
     if fmt == "yaml":

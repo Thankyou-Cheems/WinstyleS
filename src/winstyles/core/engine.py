@@ -15,6 +15,7 @@ from typing import Any
 
 from winstyles.core.analyzer import DiffAnalyzer
 from winstyles.domain.models import ExportOptions, Manifest, ScannedItem, ScanResult, SourceSystem
+from winstyles.domain.types import AssetType
 from winstyles.infra.filesystem import WindowsFileSystemAdapter
 from winstyles.infra.registry import WindowsRegistryAdapter
 from winstyles.infra.restore import RestorePointManager
@@ -177,6 +178,7 @@ class StyleEngine:
         scan_result: ScanResult,
         output_path: Path,
         include_assets: bool = True,
+        include_font_files: bool = False,
     ) -> Manifest:
         """
         导出配置包
@@ -185,6 +187,7 @@ class StyleEngine:
             scan_result: 扫描结果
             output_path: 输出路径
             include_assets: 是否包含资源文件
+            include_font_files: 是否包含字体文件
 
         Returns:
             Manifest: 导出包的清单
@@ -197,6 +200,7 @@ class StyleEngine:
                     output_dir,
                     scan_result=scan_result,
                     include_assets=include_assets,
+                    include_font_files=include_font_files,
                 )
                 self._zip_dir(output_dir, output_path)
                 return manifest
@@ -206,6 +210,7 @@ class StyleEngine:
             output_path,
             scan_result=scan_result,
             include_assets=include_assets,
+            include_font_files=include_font_files,
         )
 
     def import_package(
@@ -245,6 +250,7 @@ class StyleEngine:
         output_dir: Path,
         scan_result: ScanResult,
         include_assets: bool,
+        include_font_files: bool,
     ) -> Manifest:
         output_dir.mkdir(parents=True, exist_ok=True)
         assets_dir = output_dir / "assets"
@@ -277,13 +283,24 @@ class StyleEngine:
         )
 
         if include_assets:
-            self._export_assets(scan_result, assets_dir)
+            self._export_assets(
+                scan_result,
+                assets_dir,
+                include_font_files=include_font_files,
+            )
 
         return manifest
 
-    def _export_assets(self, scan_result: ScanResult, assets_dir: Path) -> None:
+    def _export_assets(
+        self,
+        scan_result: ScanResult,
+        assets_dir: Path,
+        include_font_files: bool,
+    ) -> None:
         for item in scan_result.items:
             for file in item.associated_files:
+                if file.type == AssetType.FONT and not include_font_files:
+                    continue
                 if not file.exists:
                     continue
                 src_path = Path(file.path)

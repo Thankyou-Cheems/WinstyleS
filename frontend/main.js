@@ -185,18 +185,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const categories = getSelectedCategories("scanCategories");
     const modifiedOnly = document.getElementById("scanModifiedOnly")?.checked || false;
 
-    // Use JSON format for data processing
-    const format = "json";
+    const format = document.getElementById("scanFormat")?.value || "table";
 
     try {
       const result = await invokeOrWarn(
         "scan",
         { categories, format, modifiedOnly },
-        "scanOutput"
+        null
       );
 
       if (result !== null) {
-        renderScanTable(result);
+        if (format === "table") {
+          renderScanTable(result);
+        } else {
+          renderScanRawOutput(result, format);
+        }
         setStatus("扫描完成");
       }
     } catch (err) {
@@ -297,6 +300,21 @@ document.addEventListener("DOMContentLoaded", () => {
     scanResults.innerHTML = html;
   }
 
+  function renderScanRawOutput(result, format) {
+    const raw =
+      typeof result === "string"
+        ? result
+        : format === "json"
+          ? JSON.stringify(result, null, 2)
+          : String(result);
+    scanResults.innerHTML = "";
+    const pre = document.createElement("pre");
+    pre.className = "output-content";
+    pre.style.minHeight = "240px";
+    pre.textContent = raw;
+    scanResults.appendChild(pre);
+  }
+
   function formatValue(val) {
     if (val === null || val === undefined) return "-";
     if (typeof val === "object") return JSON.stringify(val);
@@ -322,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Force HTML format for web view
     const format = "html";
-    const checkUpdates = document.getElementById("checkFontUpdates")?.checked || true;
+    const checkUpdates = document.getElementById("checkFontUpdates")?.checked ?? true;
 
     try {
       const result = await invokeOrWarn(
@@ -356,7 +374,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================
 
   const checkUpdatesBtn = document.getElementById("checkUpdatesBtn");
+  const refreshFontDbBtn = document.getElementById("refreshFontDbBtn");
   const updatesList = document.getElementById("updatesList");
+
+  refreshFontDbBtn?.addEventListener("click", async () => {
+    setButtonLoading(refreshFontDbBtn, true);
+    setStatus("正在刷新字体数据库...");
+    try {
+      const result = await invokeOrWarn("refresh_font_db", {}, null);
+      if (result && result.ok) {
+        setStatus(`字体数据库已刷新（${result.font_count || 0} 条）`);
+      } else {
+        setStatus(result?.message || "字体数据库刷新失败", true);
+      }
+    } catch (err) {
+      setStatus(`字体数据库刷新失败: ${err}`, true);
+    } finally {
+      setButtonLoading(refreshFontDbBtn, false);
+    }
+  });
 
   checkUpdatesBtn?.addEventListener("click", async () => {
     setStatus("正在检查字体更新...");
@@ -510,7 +546,30 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================
 
   const exportBtn = document.getElementById("exportBtn");
+  const exportPreviewBtn = document.getElementById("exportPreviewBtn");
   const exportResultContainer = document.getElementById("exportResultContainer");
+
+  exportPreviewBtn?.addEventListener("click", async () => {
+    setButtonLoading(exportPreviewBtn, true);
+    setStatus("正在预览导出内容...");
+    try {
+      const categories = getSelectedCategories("exportCategories");
+      const includeDefaults = document.getElementById("exportIncludeDefaults")?.checked || false;
+      const result = await invokeOrWarn(
+        "scan",
+        { categories, format: "json", modifiedOnly: !includeDefaults },
+        null
+      );
+      if (result !== null) {
+        renderExportPreview(result, includeDefaults);
+        setStatus("预览生成完成");
+      }
+    } catch (err) {
+      setStatus(`预览失败: ${err}`, true);
+    } finally {
+      setButtonLoading(exportPreviewBtn, false);
+    }
+  });
 
   exportBtn?.addEventListener("click", async () => {
     setStatus("导出中...");
@@ -594,6 +653,38 @@ document.addEventListener("DOMContentLoaded", () => {
       setButtonLoading(exportBtn, false);
     }
   });
+
+  function renderExportPreview(scanResult, includeDefaults) {
+    let parsed = scanResult;
+    try {
+      if (typeof scanResult === "string") {
+        parsed = JSON.parse(scanResult);
+      }
+    } catch {
+      parsed = { items: [] };
+    }
+
+    const items = Array.isArray(parsed?.items) ? parsed.items : [];
+    const byCategory = {};
+    items.forEach((item) => {
+      byCategory[item.category] = (byCategory[item.category] || 0) + 1;
+    });
+
+    const rows = Object.entries(byCategory)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([cat, count]) => `<div class="export-preview-row"><span>${cat}</span><span>${count} 项</span></div>`)
+      .join("");
+
+    exportResultContainer.innerHTML = `
+      <div class="empty-state" style="padding: 24px 0;">
+        <p class="empty-title">导出预览</p>
+        <p class="empty-desc">预计导出 ${items.length} 项配置（${includeDefaults ? "包含默认项" : "仅修改项"}）</p>
+        <div style="width:min(520px,100%); margin-top: 16px; text-align:left;">
+          ${rows || '<p class="empty-desc">无可导出项</p>'}
+        </div>
+      </div>
+    `;
+  }
 
   // ============================================
   // Import Page
@@ -680,6 +771,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("copyReport")?.addEventListener("click", () => {
     copyToClipboard("reportOutput");
+  });
+
+  document.getElementById("copyExportOutput")?.addEventListener("click", () => {
+    copyToClipboard("exportResultContainer");
   });
 
   async function copyToClipboard(elementId) {

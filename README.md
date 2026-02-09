@@ -49,11 +49,17 @@ winstyles report
 # 导出配置包
 winstyles export ./my-style.zip
 
+# 导出时包含字体文件
+winstyles export ./my-style.zip --include-font-files
+
 # 预览导入（不实际应用）
 winstyles import ./my-style.zip --dry-run
 
 # 导入配置包
 winstyles import ./my-style.zip
+
+# 生成报告但跳过联网更新检查
+winstyles report --no-check-updates
 ```
 
 ### 启动 Web GUI

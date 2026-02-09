@@ -47,8 +47,23 @@ winstyles import ./my-style.zip --skip-restore-point
 
 Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
 
+- `POST /api/scan`
+  - 输入：`{ "categories": ["fonts","terminal"], "format": "table|json|yaml", "modifiedOnly": true }`
+  - 行为：`format=table` 时后端仍返回 JSON 数据（供前端渲染表格）；`modifiedOnly` 在脚本模式与打包模式都生效
+
+- `POST /api/export_config`
+  - 输入：`{ "path": "D:\\...\\my-style.zip", "categories": "fonts,terminal", "includeDefaults": false, "includeFontFiles": true }`
+  - 行为：支持将 `includeFontFiles` 透传到导出流程，仅在开启时打包字体文件资产
+
+- `POST /api/generate_report`
+  - 输入：`{ "format": "markdown|html", "checkUpdates": true }`
+  - 行为：`checkUpdates=false` 时跳过字体更新检查（减少联网请求）
+
 - `POST /api/check_font_updates`
   - 行为：执行真实字体扫描与更新检查，返回更新列表（不再返回固定空数组）
+
+- `POST /api/refresh_font_db`
+  - 行为：主动拉取远程字体数据库并返回条目数量
 
 - `POST /api/import_config`
   - 输入方式 A：`{ "path": "C:\\...\\my-style.zip", "dryRun": true, "skipRestore": true }`

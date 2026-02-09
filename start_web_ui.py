@@ -1,4 +1,3 @@
-
 import base64
 import http.server
 import json
@@ -14,7 +13,7 @@ from pathlib import Path
 PORT = 8000
 
 # Detect if running as bundled executable
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     # Running as compiled executable
     ROOT_DIR = Path(sys._MEIPASS)
     FRONTEND_DIR = ROOT_DIR / "frontend"
@@ -34,7 +33,7 @@ if not IS_FROZEN:
 # Map specific commands to CLI arguments (for non-frozen mode)
 # Note: output of these commands is expected to be JSON printed to stdout.
 CMD_MAP = {
-    "scan": [sys.executable, "-m", "winstyles", "scan", "-f", "json"],
+    "scan": [sys.executable, "-m", "winstyles", "scan"],
     "export_config": [sys.executable, "-m", "winstyles", "export"],
     "import_config": [sys.executable, "-m", "winstyles", "import"],
     "generate_report": [sys.executable, "-m", "winstyles", "report", "-f", "markdown"],
@@ -42,22 +41,28 @@ CMD_MAP = {
     "inspect": [sys.executable, "-m", "winstyles", "inspect", "-f", "json"],
 }
 
+
 # Direct module imports for frozen mode
 def get_engine():
     """Get StyleEngine instance."""
     from winstyles.core.engine import StyleEngine
+
     return StyleEngine()
+
 
 def get_report_generator(scan_result, check_updates=True):
     """Get ReportGenerator instance."""
     from winstyles.core.report import ReportGenerator
+
     return ReportGenerator(scan_result, check_updates=check_updates)
+
 
 class ApiHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         # Silence logs to avoid cluttering if needed, or keep for debugging
-        sys.stderr.write(f"{self.client_address[0]} - - "
-                         f"[{self.log_date_time_string()}] {format % args}\n")
+        sys.stderr.write(
+            f"{self.client_address[0]} - - " f"[{self.log_date_time_string()}] {format % args}\n"
+        )
 
     def do_GET(self):
         if self.path == "/":
@@ -74,7 +79,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, "API endpoint not found")
 
     def handle_api(self):
-        content_len = int(self.headers.get('Content-Length', 0))
+        content_len = int(self.headers.get("Content-Length", 0))
         post_body = self.rfile.read(content_len)
         try:
             payload = json.loads(post_body) if post_body else {}
@@ -89,20 +94,20 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
             # Send response
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header("Content-type", "application/json")
             self.end_headers()
 
             # If the result is a dict/list, dump it.
             # If it's a string (JSON string from CLI), dump it as a string.
             # Tauri backend returns a String which contains JSON.
             # So here we return a JSON stringified String.
-            self.wfile.write(json.dumps(result).encode('utf-8'))
+            self.wfile.write(json.dumps(result).encode("utf-8"))
 
         except Exception as e:
             self.send_response(500)
-            self.send_header('Content-type', 'application/json')
+            self.send_header("Content-type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 
     def dispatch_command(self, name, payload):
         # In frozen mode, call modules directly
@@ -111,22 +116,31 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
         # In development mode, use subprocess
         if name == "scan":
-            return self.run_cli_command(CMD_MAP["scan"], payload,
-                                      args_mapper=self.map_scan_args)
+            return self.run_cli_command(CMD_MAP["scan"], payload, args_mapper=self.map_scan_args)
         elif name == "export_config":
-            return self.run_cli_command(CMD_MAP["export_config"], payload,
-                                      args_mapper=self.map_export_args)
+            return self.run_cli_command(
+                CMD_MAP["export_config"], payload, args_mapper=self.map_export_args
+            )
         elif name == "import_config":
             return self.run_import_command(payload)
         elif name == "generate_report":
             # Report usually returns text content
             args = [
-                sys.executable, "-m", "winstyles", "report", "-f", payload.get("format", "markdown")
+                sys.executable,
+                "-m",
+                "winstyles",
+                "report",
+                "-f",
+                payload.get("format", "markdown"),
             ]
+            if not bool(payload.get("checkUpdates", True)):
+                args.append("--no-check-updates")
             return self.run_cli_command_raw(args)
 
         elif name == "check_font_updates":
             return self.check_font_updates()
+        elif name == "refresh_font_db":
+            return self.refresh_font_db()
 
         elif name == "open_output_folder":
             os.startfile(os.getcwd())
@@ -137,7 +151,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return ""
 
         elif name == "browse_save_path" or name == "browse_open_path":
-             return "" # Not supported in web mode
+            return ""  # Not supported in web mode
 
         else:
             raise ValueError(f"Unknown command: {name}")
@@ -147,16 +161,17 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         if name == "scan":
             engine = get_engine()
             categories = payload.get("categories")
-            # modified_only = payload.get("modifiedOnly", False)
             result = engine.scan_all(categories=categories)
-            # Convert to JSON
+            if payload.get("modifiedOnly"):
+                result = self._filter_scan_result(result, keep_defaults=False)
             return result.model_dump_json()
 
         elif name == "generate_report":
             engine = get_engine()
             result = engine.scan_all(categories=None)
             fmt = payload.get("format", "markdown")
-            generator = get_report_generator(result, check_updates=True)
+            check_updates = bool(payload.get("checkUpdates", True))
+            generator = get_report_generator(result, check_updates=check_updates)
             if fmt == "html":
                 return generator.generate_html()
             else:
@@ -164,6 +179,8 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
         elif name == "check_font_updates":
             return self.check_font_updates()
+        elif name == "refresh_font_db":
+            return self.refresh_font_db()
 
         elif name == "open_output_folder":
             os.startfile(os.getcwd())
@@ -176,8 +193,31 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return ""
 
         elif name == "export_config":
-            # TODO: Implement direct export
-            return json.dumps({"error": "Export not yet supported in packaged mode"})
+            output_path = payload.get("path")
+            if not output_path:
+                raise ValueError("Path is required")
+
+            categories = payload.get("categories")
+            if isinstance(categories, str):
+                categories = [c.strip() for c in categories.split(",") if c.strip()]
+            if not categories:
+                categories = None
+
+            include_defaults = bool(payload.get("includeDefaults"))
+            include_font_files = bool(payload.get("includeFontFiles"))
+
+            engine = get_engine()
+            scan_result = engine.scan_all(categories=categories)
+            if not include_defaults:
+                scan_result = self._filter_scan_result(scan_result, keep_defaults=False)
+
+            manifest = engine.export_package(
+                scan_result,
+                Path(output_path),
+                include_assets=True,
+                include_font_files=include_font_files,
+            )
+            return manifest.model_dump(mode="json")
 
         elif name == "import_config":
             temp_path = None
@@ -296,6 +336,19 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
         return updates
 
+    def refresh_font_db(self):
+        from winstyles.core.update_checker import UpdateChecker
+
+        checker = UpdateChecker()
+        db = checker.fetch_remote_db()
+        if not db:
+            return {"ok": False, "message": "无法获取远程字体数据库"}
+        return {
+            "ok": True,
+            "message": "字体数据库刷新完成",
+            "font_count": len(db.get("fonts", [])),
+        }
+
     def run_subprocess(self, cmd):
         print(f"Executing: {' '.join(cmd)}")
         # Run in src directory
@@ -304,12 +357,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         env["WINSTYLES_WEB_MODE"] = "1"
 
         result = subprocess.run(
-            cmd,
-            cwd=str(SRC_DIR),
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            env=env
+            cmd, cwd=str(SRC_DIR), capture_output=True, text=True, encoding="utf-8", env=env
         )
 
         if result.returncode != 0:
@@ -324,7 +372,11 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             for cat in payload.get("categories"):
                 # Ensure we don't double encode if categories is a list of strings
                 if isinstance(cat, str):
-                   args.extend(["-c", cat])
+                    args.extend(["-c", cat])
+
+        requested_format = str(payload.get("format", "json")).lower()
+        format_arg = "json" if requested_format == "table" else requested_format
+        args.extend(["-f", format_arg])
 
         if payload.get("modifiedOnly"):
             args.append("--modified-only")
@@ -345,13 +397,34 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
         if payload.get("includeDefaults"):
             args.append("--include-defaults")
+        if payload.get("includeFontFiles"):
+            args.append("--include-font-files")
         return args
+
+    def _filter_scan_result(self, result, keep_defaults):
+        if keep_defaults:
+            return result
+        filtered_items = [item for item in result.items if item.change_type.value != "default"]
+        summary = {}
+        for item in filtered_items:
+            summary[item.category] = summary.get(item.category, 0) + 1
+
+        from winstyles.domain.models import ScanResult
+
+        return ScanResult(
+            scan_id=result.scan_id,
+            scan_time=result.scan_time,
+            os_version=result.os_version,
+            items=filtered_items,
+            summary=summary,
+            duration_ms=result.duration_ms,
+        )
 
     def map_import_args(self, payload):
         args = []
         path = payload.get("path")
         if not path:
-             raise ValueError("Path is required")
+            raise ValueError("Path is required")
         args.append(path)
 
         if payload.get("dryRun"):
@@ -360,8 +433,10 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             args.append("--skip-restore-point")
         return args
 
+
 class ReusableTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
+
 
 def run_server():
     with ReusableTCPServer(("", PORT), ApiHandler) as httpd:
@@ -372,6 +447,7 @@ def run_server():
             httpd.serve_forever()
         except KeyboardInterrupt:
             pass
+
 
 if __name__ == "__main__":
     run_server()

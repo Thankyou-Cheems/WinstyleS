@@ -11,9 +11,16 @@
 - 修复 Web 模式 `check_font_updates` 固定返回空结果的问题，改为真实检查流程
 - 修复 Web 模式导入在浏览器仅有文件对象时无法导入的问题，新增 zip 上传导入通道
 - 修复版本显示不一致：`__version__` 与 `pyproject.toml` 版本对齐为 `0.2.0`
+- 修复 Web 扫描“仅显示修改项”在打包模式不生效的问题
+- 修复导出“包含字体文件”选项未透传到后端的问题，新增 `--include-font-files`
+- 修复报告“检查字体更新”开关始终生效的问题，新增 `--check-updates/--no-check-updates`
+- 修复 Web 前端未绑定功能：字体数据库刷新、导出预览、导出日志复制、扫描格式选择
+- 修复 Windows 非 UTF-8 控制台执行 `winstyles report` 时的编码异常（改为 ASCII 转义输出）
 
 ### Changed
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发
+- 增强字体扫描器：为 FontSubstitutes / FontLink 补充字体文件关联，便于导出字体资产
+- 打包模式（frozen）新增直接导出实现，不再返回 `Export not yet supported in packaged mode`
 
 ## [0.3.0] - 2026-01-27
 
