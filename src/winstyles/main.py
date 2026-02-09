@@ -105,7 +105,7 @@ def scan(
 
     items = result.items
     if modified_only:
-        items = [item for item in items if item.change_type.value != "default"]
+        items = [item for item in items if item.change_type.value == "modified"]
 
     if format not in {"table", "json", "yaml"}:
         console.print(f"[red]不支持的输出格式: {format}[/red]")
@@ -624,7 +624,7 @@ def _print_scan_summary(result: ScanResult, items: list[ScannedItem]) -> None:
 def _filter_scan_result(result: ScanResult, keep_defaults: bool) -> ScanResult:
     if keep_defaults:
         return result
-    filtered_items = [item for item in result.items if item.change_type.value != "default"]
+    filtered_items = [item for item in result.items if item.change_type.value == "modified"]
     summary: dict[str, int] = {}
     for item in filtered_items:
         summary[item.category] = summary.get(item.category, 0) + 1

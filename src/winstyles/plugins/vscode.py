@@ -16,6 +16,7 @@ from typing import Any
 from winstyles.domain.models import AssociatedFile, ScannedItem
 from winstyles.domain.types import AssetType, ChangeType, SourceType
 from winstyles.plugins.base import BaseScanner
+from winstyles.utils.font_utils import find_font_paths, split_font_families
 
 
 class VSCodeScanner(BaseScanner):
@@ -116,6 +117,8 @@ class VSCodeScanner(BaseScanner):
                 else:
                     display_value = value
 
+                associated_files = self._build_font_associated_files_for_key(key, value)
+
                 items.append(
                     ScannedItem(
                         category=self.category,
@@ -126,6 +129,7 @@ class VSCodeScanner(BaseScanner):
                         source_type=SourceType.FILE,
                         source_path=str(settings_path),
                         metadata={"raw_value": value},
+                        associated_files=associated_files,
                     )
                 )
 
@@ -149,6 +153,29 @@ class VSCodeScanner(BaseScanner):
             )
 
         return items
+
+    def _build_font_associated_files_for_key(self, key: str, value: Any) -> list[AssociatedFile]:
+        if key not in {"editor.fontFamily", "terminal.integrated.fontFamily"}:
+            return []
+
+        files: list[AssociatedFile] = []
+        for family in split_font_families(str(value)):
+            for path in find_font_paths(family):
+                try:
+                    size = path.stat().st_size
+                except OSError:
+                    size = None
+                files.append(
+                    AssociatedFile(
+                        type=AssetType.FONT,
+                        name=path.name,
+                        path=str(path),
+                        exists=True,
+                        size_bytes=size,
+                        sha256=None,
+                    )
+                )
+        return files
 
     def _parse_jsonc(self, content: str) -> dict[str, Any]:
         """解析带注释的 JSON (JSONC)"""

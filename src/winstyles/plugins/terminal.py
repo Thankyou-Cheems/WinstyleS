@@ -14,6 +14,7 @@ from pathlib import Path
 from winstyles.domain.models import AssociatedFile, ScannedItem
 from winstyles.domain.types import AssetType, ChangeType, SourceType
 from winstyles.plugins.base import BaseScanner
+from winstyles.utils.font_utils import find_font_paths, split_font_families
 
 
 class WindowsTerminalScanner(BaseScanner):
@@ -93,6 +94,9 @@ class WindowsTerminalScanner(BaseScanner):
             # 扫描 profiles.defaults
             defaults = settings.get("profiles", {}).get("defaults", {})
             for key, value in self._flatten_profile_defaults(defaults):
+                associated_files: list[AssociatedFile] = []
+                if key in {"font.face", "fontFace"}:
+                    associated_files = self._build_font_associated_files(value)
                 items.append(
                     ScannedItem(
                         category=self.category,
@@ -102,6 +106,7 @@ class WindowsTerminalScanner(BaseScanner):
                         change_type=ChangeType.MODIFIED,
                         source_type=SourceType.FILE,
                         source_path=str(settings_path),
+                        associated_files=associated_files,
                     )
                 )
 
@@ -170,9 +175,29 @@ class WindowsTerminalScanner(BaseScanner):
             next_value = current.get(part)
             if not isinstance(next_value, dict):
                 next_value = {}
-                current[part] = next_value
+            current[part] = next_value
             current = next_value
         current[path_parts[-1]] = value
+
+    def _build_font_associated_files(self, value: object) -> list[AssociatedFile]:
+        files: list[AssociatedFile] = []
+        for family in split_font_families(str(value)):
+            for path in find_font_paths(family):
+                try:
+                    size = path.stat().st_size
+                except OSError:
+                    size = None
+                files.append(
+                    AssociatedFile(
+                        type=AssetType.FONT,
+                        name=path.name,
+                        path=str(path),
+                        exists=True,
+                        size_bytes=size,
+                        sha256=None,
+                    )
+                )
+        return files
 
 
 class PowerShellProfileScanner(BaseScanner):

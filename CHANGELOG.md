@@ -20,6 +20,9 @@
 - 修复 Windows Terminal 导入未实现问题：支持将扫描项写回本机 `settings.json`
 - 修复 PowerShell Profile 跨用户路径问题：导入时写入当前用户 Profile 路径
 - 修复注册表写入 `REG_MULTI_SZ` 推断，确保 FontLink 多字符串值可正确导入
+- 修复“仅显示修改项”过滤逻辑：从“非默认”改为仅保留 `change_type=modified`，避免 `added` 大量误入扫描与导出
+- 修复字体导出与实际使用不匹配问题：从 Terminal/VSCode 字体配置反查并打包字体文件，补齐用户自装字体
+- 优化导出去重：同一分类内同源字体文件仅复制一次，减少重复 `*_hash.ttf/ttc`
 
 ### Changed
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发

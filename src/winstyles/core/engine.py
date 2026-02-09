@@ -297,7 +297,11 @@ class StyleEngine:
         assets_dir: Path,
         include_font_files: bool,
     ) -> None:
+        copied_by_category: dict[str, set[str]] = {}
         for item in scan_result.items:
+            category_key = item.category
+            if category_key not in copied_by_category:
+                copied_by_category[category_key] = set()
             for file in item.associated_files:
                 if file.type == AssetType.FONT and not include_font_files:
                     continue
@@ -306,12 +310,16 @@ class StyleEngine:
                 src_path = Path(file.path)
                 if not src_path.exists():
                     continue
+                normalized_src = str(src_path).lower()
+                if normalized_src in copied_by_category[category_key]:
+                    continue
                 dest_dir = assets_dir / item.category
                 dest_dir.mkdir(parents=True, exist_ok=True)
                 dest_path = dest_dir / src_path.name
                 if dest_path.exists():
                     dest_path = dest_dir / f"{src_path.stem}_{abs(hash(src_path))}{src_path.suffix}"
                 shutil.copy2(src_path, dest_path)
+                copied_by_category[category_key].add(normalized_src)
 
     def _zip_dir(self, source_dir: Path, output_path: Path) -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)

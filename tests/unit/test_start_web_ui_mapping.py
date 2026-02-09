@@ -38,7 +38,7 @@ def test_map_export_args_supports_include_font_files() -> None:
     ]
 
 
-def test_filter_scan_result_keeps_only_non_default_items() -> None:
+def test_filter_scan_result_keeps_only_modified_items() -> None:
     handler = ApiHandler.__new__(ApiHandler)
     scan_result = ScanResult(
         scan_id="20260209190000",
@@ -63,8 +63,17 @@ def test_filter_scan_result_keeps_only_non_default_items() -> None:
                 source_type=SourceType.FILE,
                 source_path=r"C:\b",
             ),
+            ScannedItem(
+                category="fonts",
+                key="c",
+                current_value="z",
+                default_value=None,
+                change_type=ChangeType.ADDED,
+                source_type=SourceType.REGISTRY,
+                source_path="HKLM\\c",
+            ),
         ],
-        summary={"fonts": 1, "terminal": 1},
+        summary={"fonts": 2, "terminal": 1},
     )
 
     filtered = handler._filter_scan_result(scan_result, keep_defaults=False)

@@ -404,7 +404,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
     def _filter_scan_result(self, result, keep_defaults):
         if keep_defaults:
             return result
-        filtered_items = [item for item in result.items if item.change_type.value != "default"]
+        filtered_items = [item for item in result.items if item.change_type.value == "modified"]
         summary = {}
         for item in filtered_items:
             summary[item.category] = summary.get(item.category, 0) + 1
