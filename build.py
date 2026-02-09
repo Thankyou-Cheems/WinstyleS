@@ -4,20 +4,21 @@ Creates a standalone executable using PyInstaller.
 
 Usage:
     python build.py
-    
+
 The output will be in the 'dist' folder.
 """
 
+import os
 import subprocess
 import sys
-import os
+
 
 def main():
     print("=" * 50)
     print("WinstyleS Build Script")
     print("=" * 50)
     print()
-    
+
     # Check if PyInstaller is installed
     try:
         import PyInstaller
@@ -26,26 +27,26 @@ def main():
         print("✗ PyInstaller not found. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
         print("✓ PyInstaller installed")
-    
+
     # Get project root
     project_root = os.path.dirname(os.path.abspath(__file__))
     spec_file = os.path.join(project_root, "winstyles.spec")
-    
+
     if not os.path.exists(spec_file):
         print(f"✗ Spec file not found: {spec_file}")
         sys.exit(1)
-    
+
     print(f"✓ Using spec file: {spec_file}")
     print()
     print("Building executable...")
     print("-" * 50)
-    
+
     # Run PyInstaller
     result = subprocess.run(
         [sys.executable, "-m", "PyInstaller", "--clean", spec_file],
         cwd=project_root
     )
-    
+
     if result.returncode == 0:
         print()
         print("=" * 50)

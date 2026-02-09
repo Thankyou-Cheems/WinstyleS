@@ -1,0 +1,195 @@
+warning: The top-level linter settings are deprecated in favour of their counterparts in the `lint` section. Please update the following options in `pyproject.toml`:
+  - 'select' -> 'lint.select'
+W293 Blank line contains whitespace
+ --> build.py:7:1
+  |
+5 | Usage:
+6 |     python build.py
+7 |     
+  | ^^^^
+8 | The output will be in the 'dist' folder.
+9 | """
+  |
+help: Remove whitespace from blank line
+
+W293 Blank line contains whitespace
+   --> src\winstyles\core\report.py:319:1
+    |
+317 |                 --code-bg: #1f2428;
+318 |                 --accent: #58a6ff;
+319 |                 
+    | ^^^^^^^^^^^^^^^^
+320 |                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+321 |                 color: var(--text-color);
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (105 > 100)
+   --> src\winstyles\core\report.py:320:101
+    |
+318 |                 --accent: #58a6ff;
+319 |                 
+320 |                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    |                                                                                                     ^^^^^
+321 |                 color: var(--text-color);
+322 |                 line-height: 1.6;
+    |
+
+W293 Blank line contains whitespace
+   --> src\winstyles\core\report.py:324:1
+    |
+322 |                 line-height: 1.6;
+323 |             }
+324 |             
+    | ^^^^^^^^^^^^
+325 |             .winstyles-report h1 {
+326 |                 color: var(--heading-color);
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (111 > 100)
+   --> src\winstyles\gui\app.py:284:97
+    |
+282 |         header_frame.grid_columnconfigure(0, weight=1)
+283 |
+284 |         title = ctk.CTkLabel(header_frame, text="蹇€熸壂鎻?, font=self.font_heading, text_color=self.COLOR_TEXT)
+    |                                                                                                     ^^^^^^^^^^^
+285 |         title.grid(row=0, column=0, sticky="w")
+    |
+
+E501 Line too long (104 > 100)
+   --> src\winstyles\gui\app.py:358:94
+    |
+356 |             output = "\n".join(lines) + "\n"
+357 |             self.after(0, lambda: self._append_scan_output(output, clear=True))
+358 |             self.after(0, lambda: self.scan_summary.configure(text=f"鏈€杩戜竴娆℃壂鎻忥細{result.scan_time}"))
+    |                                                                                                     ^^^^
+359 |             self.after(0, lambda: self.set_status("鎵弿瀹屾垚", "green"))
+360 |         except Exception as exc:
+    |
+
+E501 Line too long (115 > 100)
+   --> src\winstyles\gui\app.py:386:95
+    |
+384 |         header_frame.grid_columnconfigure(0, weight=1)
+385 |
+386 |         title = ctk.CTkLabel(header_frame, text="绯荤粺鍒嗘瀽鎶ュ憡", font=self.font_heading, text_color=self.COLOR_TEXT)
+    |                                                                                                     ^^^^^^^^^^^^^^^
+387 |         title.grid(row=0, column=0, sticky="w")
+    |
+
+F821 Undefined name `exc`
+   --> src\winstyles\gui\app.py:516:60
+    |
+514 |             self.after(0, lambda: self.set_status("宸插湪娴忚鍣ㄤ腑鎵撳紑鎶ュ憡", "green"))
+515 |         except Exception:
+516 |             self.after(0, lambda: self.set_status(f"鎵撳紑澶辫触: {exc}", "red"))
+    |                                                                ^^^
+517 |         finally:
+518 |             self.after(0, lambda: self.open_browser_btn.configure(state="normal"))
+    |
+
+E501 Line too long (115 > 100)
+   --> src\winstyles\gui\app.py:538:95
+    |
+536 |         header_frame.grid_columnconfigure(0, weight=1)
+537 |
+538 |         title = ctk.CTkLabel(header_frame, text="瀛椾綋鏇存柊妫€鏌?, font=self.font_heading, text_color=self.COLOR_TEXT)
+    |                                                                                                     ^^^^^^^^^^^^^^^
+539 |         title.grid(row=0, column=0, sticky="w")
+    |
+
+F821 Undefined name `exc`
+   --> src\winstyles\gui\app.py:670:64
+    |
+669 |         except Exception:
+670 |             self.after(0, lambda: self._show_updates_error(str(exc)))
+    |                                                                ^^^
+671 |             self.after(0, lambda: self.set_status("妫€鏌ュけ璐?, "red"))
+672 |         finally:
+    |
+
+E501 Line too long (106 > 100)
+   --> src\winstyles\gui\app.py:807:96
+    |
+805 |         frame.grid_columnconfigure(0, weight=1)
+806 |
+807 |         title = ctk.CTkLabel(frame, text="瀵煎嚭閰嶇疆鍖?, font=self.font_heading, text_color=self.COLOR_TEXT)
+    |                                                                                                     ^^^^^^
+808 |         subtitle = ctk.CTkLabel(
+809 |             frame,
+    |
+
+E501 Line too long (106 > 100)
+   --> src\winstyles\gui\app.py:832:96
+    |
+830 |         frame.grid_columnconfigure(0, weight=1)
+831 |
+832 |         title = ctk.CTkLabel(frame, text="瀵煎叆閰嶇疆鍖?, font=self.font_heading, text_color=self.COLOR_TEXT)
+    |                                                                                                     ^^^^^^
+833 |         subtitle = ctk.CTkLabel(
+834 |             frame,
+    |
+
+E501 Line too long (107 > 100)
+   --> src\winstyles\gui\app.py:874:86
+    |
+872 |         about_text = ctk.CTkLabel(
+873 |             about_frame,
+874 |             text="WinstyleS - Windows Style Sync\n鐗堟湰 0.1.0\n\n鑷姩鎵弿銆佸鍑恒€佸悓姝ヤ綘鐨?Windows 缇庡寲閰嶇疆",
+    |                                                                                                      ^^^^^^
+875 |             font=self.font_body,
+876 |             text_color=self.COLOR_MUTED,
+    |
+
+UP031 Use format specifiers instead of percent format
+  --> start_web_ui.py:57:26
+   |
+55 |       def log_message(self, format, *args):
+56 |           # Silence logs to avoid cluttering if needed, or keep for debugging
+57 |           sys.stderr.write("%s - - [%s] %s\n" %
+   |  __________________________^
+58 | |                          (self.client_address[0],
+59 | |                           self.log_date_time_string(),
+60 | |                           format%args))
+   | |______________________________________^
+61 |
+62 |       def do_GET(self):
+   |
+help: Replace with format specifiers
+
+E501 Line too long (114 > 100)
+  --> start_web_ui.py:95:101
+   |
+93 |             self.end_headers()
+94 |
+95 |             # If the result is a dict/list, dump it. If it's a string (JSON string from CLI), dump it as a string.
+   |                                                                                                     ^^^^^^^^^^^^^^
+96 |             # Tauri backend returns a String which contains JSON.
+97 |             # So here we return a JSON stringified String.
+   |
+
+E501 Line too long (105 > 100)
+   --> start_web_ui.py:123:101
+    |
+121 |         elif name == "generate_report":
+122 |             # Report usually returns text content
+123 |             args = [sys.executable, "-m", "winstyles", "report", "-f", payload.get("format", "markdown")]
+    |                                                                                                     ^^^^^
+124 |             return self.run_cli_command_raw(args)
+    |
+
+F841 Local variable `modified_only` is assigned to but never used
+   --> start_web_ui.py:149:13
+    |
+147 |             engine = get_engine()
+148 |             categories = payload.get("categories")
+149 |             modified_only = payload.get("modifiedOnly", False)
+    |             ^^^^^^^^^^^^^
+150 |             result = engine.scan_all(categories=categories)
+151 |             # Convert to JSON
+    |
+help: Remove assignment to unused variable `modified_only`
+
+Found 17 errors.
+No fixes available (5 hidden fixes can be enabled with the `--unsafe-fixes` option).

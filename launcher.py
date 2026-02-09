@@ -4,8 +4,8 @@ WinstyleS Launcher
 Entry point for the packaged application.
 """
 
-import sys
 import os
+import sys
 
 # When running as a bundled executable, add the correct paths
 if getattr(sys, 'frozen', False):
@@ -21,9 +21,9 @@ def main():
     """Launch the WinstyleS GUI."""
     # Determine which GUI to launch
     # Priority: Web UI (more modern), fallback to CustomTkinter
-    
+
     print("正在启动 WinstyleS...")
-    
+
     try:
         # Try to import and run the web UI
         from start_web_ui import run_server

@@ -14,7 +14,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from winstyles.domain.models import FontInfo
+from winstyles.domain.models import OpenSourceFontInfo
 
 
 @dataclass
@@ -102,7 +102,7 @@ class UpdateChecker:
         return fonts
 
     def check_font_update(
-        self, font_info: FontInfo, current_version: str | None
+        self, font_info: OpenSourceFontInfo, current_version: str | None
     ) -> UpdateInfo | None:
         """
         检查字体更新
@@ -149,7 +149,7 @@ class UpdateChecker:
 
         return None
 
-    def _extract_github_repo(self, font_info: FontInfo) -> str | None:
+    def _extract_github_repo(self, font_info: OpenSourceFontInfo) -> str | None:
         """从 URL 提取 Owner/Repo"""
         urls = [font_info.homepage, font_info.download]
 

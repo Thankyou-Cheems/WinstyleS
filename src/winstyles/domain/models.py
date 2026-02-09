@@ -143,7 +143,7 @@ class Manifest(BaseModel):
         populate_by_name = True
 
 
-class FontInfo(BaseModel):
+class OpenSourceFontInfo(BaseModel):
     """开源字体信息"""
 
     name: str

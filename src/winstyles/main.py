@@ -433,7 +433,7 @@ def report(
         # If running in web mode (detected or just by lack of output path in some context)
         # For simplicity, if no output is specified and we want text output, just print it.
         # But wait, original logic was to use temp file if open_browser.
-        
+
         if not open_browser:
             # Assume stdout output desired (e.g. for Web UI)
             # Use json dump to be safe with newlines or just print
@@ -453,7 +453,7 @@ def report(
             ) as f:
                 f.write(content)
                 temp_path = f.name
-            
+
             console.print(f"[green]报告临时文件: {temp_path}[/green]")
             webbrowser.open(temp_path)
 

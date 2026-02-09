@@ -11,10 +11,10 @@ WinstyleSApp - 主应用窗口
 from __future__ import annotations
 
 import subprocess
-import threading
-import tempfile
-import webbrowser
 import sys
+import tempfile
+import threading
+import webbrowser
 from pathlib import Path
 
 import customtkinter as ctk  # type: ignore[import-untyped]
@@ -72,7 +72,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         self.active_page = "scan"
         self.nav_buttons: dict[str, ctk.CTkButton] = {}
         self.pages: dict[str, ctk.CTkFrame] = {}
-        
+
         # 数据
         self._scan_result = None
         self._font_updates: list = []
@@ -281,9 +281,11 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         header_frame.grid(row=0, column=0, padx=24, pady=(24, 16), sticky="ew")
         header_frame.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(header_frame, text="快速扫描", font=self.font_heading, text_color=self.COLOR_TEXT)
+        title = ctk.CTkLabel(
+            header_frame, text="快速扫描", font=self.font_heading, text_color=self.COLOR_TEXT
+        )
         title.grid(row=0, column=0, sticky="w")
-        
+
         subtitle = ctk.CTkLabel(
             header_frame,
             text="扫描字体与终端配置，生成差异报告",
@@ -342,7 +344,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
             engine = StyleEngine()
             result = engine.scan_all(categories=None)
             self._scan_result = result
-            
+
             summary = result.summary
             lines = [
                 f"Scan ID: {result.scan_id}",
@@ -355,7 +357,9 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
             output = "\n".join(lines) + "\n"
             self.after(0, lambda: self._append_scan_output(output, clear=True))
-            self.after(0, lambda: self.scan_summary.configure(text=f"最近一次扫描：{result.scan_time}"))
+            self.after(
+                0, lambda: self.scan_summary.configure(text=f"最近一次扫描：{result.scan_time}")
+            )
             self.after(0, lambda: self.set_status("扫描完成", "green"))
         except Exception as exc:
             message = f"扫描失败: {exc}\n"
@@ -383,9 +387,11 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         header_frame.grid(row=0, column=0, padx=24, pady=(24, 16), sticky="ew")
         header_frame.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(header_frame, text="系统分析报告", font=self.font_heading, text_color=self.COLOR_TEXT)
+        title = ctk.CTkLabel(
+            header_frame, text="系统分析报告", font=self.font_heading, text_color=self.COLOR_TEXT
+        )
         title.grid(row=0, column=0, sticky="w")
-        
+
         subtitle = ctk.CTkLabel(
             header_frame,
             text="智能分析配置变更，识别开源字体，生成可读性高的报告",
@@ -471,7 +477,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
             engine = StyleEngine()
             result = engine.scan_all(categories=None)
             self._scan_result = result
-            
+
             check_updates = self.check_updates_var.get()
             generator = ReportGenerator(result, check_updates=check_updates)
             report_content = generator.generate_markdown()
@@ -496,7 +502,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         try:
             engine = StyleEngine()
             result = engine.scan_all(categories=None)
-            
+
             check_updates = self.check_updates_var.get()
             generator = ReportGenerator(result, check_updates=check_updates)
             html_content = generator.generate_html()
@@ -510,10 +516,10 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
             # 在浏览器中打开
             webbrowser.open(f"file://{temp_path}")
-            
+
             self.after(0, lambda: self.set_status("已在浏览器中打开报告", "green"))
         except Exception as exc:
-            self.after(0, lambda: self.set_status(f"打开失败: {exc}", "red"))
+            self.after(0, lambda e=exc: self.set_status(f"打开失败: {e}", "red"))
         finally:
             self.after(0, lambda: self.open_browser_btn.configure(state="normal"))
 
@@ -535,9 +541,11 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         header_frame.grid(row=0, column=0, padx=24, pady=(24, 16), sticky="ew")
         header_frame.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(header_frame, text="字体更新检查", font=self.font_heading, text_color=self.COLOR_TEXT)
+        title = ctk.CTkLabel(
+            header_frame, text="字体更新检查", font=self.font_heading, text_color=self.COLOR_TEXT
+        )
         title.grid(row=0, column=0, sticky="w")
-        
+
         subtitle = ctk.CTkLabel(
             header_frame,
             text="检查已安装的开源字体是否有新版本可用",
@@ -583,11 +591,11 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
     def _on_check_updates_click(self) -> None:
         self.check_updates_btn.configure(state="disabled")
         self.set_status("正在检查字体更新...", "yellow")
-        
+
         # 清空列表
         for widget in self.updates_container.winfo_children():
             widget.destroy()
-        
+
         loading_label = ctk.CTkLabel(
             self.updates_container,
             text="⏳ 正在扫描字体并检查更新...\n这可能需要几秒钟",
@@ -604,10 +612,10 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         try:
             engine = StyleEngine()
             result = engine.scan_all(categories=["fonts"])
-            
+
             checker = UpdateChecker()
             db = checker.fetch_remote_db()
-            
+
             if not db:
                 self.after(0, lambda: self._show_updates_result([]))
                 self.after(0, lambda: self.set_status("无法获取字体数据库", "red"))
@@ -615,42 +623,42 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
             updates = []
             fonts_info = db.get("fonts", [])
-            
+
             # 匹配已安装字体
             for item in result.items:
                 if item.category != "fonts":
                     continue
-                    
-                font_name = str(item.current)
-                
+
+                font_name = str(item.current_value)
+
                 # 在数据库中查找匹配
                 for font_info in fonts_info:
                     patterns = font_info.get("patterns", [])
                     name = font_info.get("name", "")
-                    
+
                     matched = False
                     for pattern in patterns:
                         pattern_lower = pattern.lower().replace("*", "")
                         if pattern_lower in font_name.lower():
                             matched = True
                             break
-                    
+
                     if matched:
                         # 获取本地版本
                         font_path = find_font_path(font_name)
                         local_version = None
                         if font_path:
                             local_version = get_font_version(font_path)
-                        
-                        # 构造 FontInfo 对象用于检查更新
-                        from winstyles.domain.models import FontInfo
-                        fi = FontInfo(
+
+                        # 构造开源字体信息对象用于检查更新
+                        from winstyles.domain.models import OpenSourceFontInfo
+                        fi = OpenSourceFontInfo(
                             name=name,
                             patterns=patterns,
                             homepage=font_info.get("homepage", ""),
                             download=font_info.get("download", ""),
                         )
-                        
+
                         update_info = checker.check_font_update(fi, local_version)
                         if update_info:
                             updates.append({
@@ -665,9 +673,9 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
             self._font_updates = updates
             self.after(0, lambda: self._show_updates_result(updates))
             self.after(0, lambda: self.set_status("更新检查完成", "green"))
-            
+
         except Exception as exc:
-            self.after(0, lambda: self._show_updates_error(str(exc)))
+            self.after(0, lambda e=exc: self._show_updates_error(str(e)))
             self.after(0, lambda: self.set_status("检查失败", "red"))
         finally:
             self.after(0, lambda: self.check_updates_btn.configure(state="normal"))
@@ -759,7 +767,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         else:
             version_text = update.get("current_version") or update.get("latest_version") or "已安装"
             version_color = self.COLOR_MUTED
-            
+
         version_label = ctk.CTkLabel(
             card,
             text=version_text,
@@ -804,7 +812,9 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         frame = ctk.CTkFrame(self.main_frame, corner_radius=12, fg_color=self.COLOR_PANEL)
         frame.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(frame, text="导出配置包", font=self.font_heading, text_color=self.COLOR_TEXT)
+        title = ctk.CTkLabel(
+            frame, text="导出配置包", font=self.font_heading, text_color=self.COLOR_TEXT
+        )
         subtitle = ctk.CTkLabel(
             frame,
             text="将扫描结果打包导出为 .zip 文件，便于迁移与分享",
@@ -829,7 +839,9 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         frame = ctk.CTkFrame(self.main_frame, corner_radius=12, fg_color=self.COLOR_PANEL)
         frame.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(frame, text="导入配置包", font=self.font_heading, text_color=self.COLOR_TEXT)
+        title = ctk.CTkLabel(
+            frame, text="导入配置包", font=self.font_heading, text_color=self.COLOR_TEXT
+        )
         subtitle = ctk.CTkLabel(
             frame,
             text="从配置包恢复个性化设置，建议先使用 dry-run 预览",
@@ -871,7 +883,8 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
         about_text = ctk.CTkLabel(
             about_frame,
-            text="WinstyleS - Windows Style Sync\n版本 0.1.0\n\n自动扫描、导出、同步你的 Windows 美化配置",
+            text=("WinstyleS - Windows Style Sync\n版本 0.1.0\n\n"
+                  "自动扫描、导出、同步你的 Windows 美化配置"),
             font=self.font_body,
             text_color=self.COLOR_MUTED,
             justify="left",
@@ -915,17 +928,17 @@ WSSApp = WinstyleSApp
 def run_gui() -> None:
     """启动 Web GUI 应用"""
     from winstyles.main import console
-    
+
     project_root = Path(__file__).resolve().parents[3]
     web_ui_script = project_root / "start_web_ui.py"
-    
+
     if not web_ui_script.exists():
         console.print("[red]错误: 未找到 Web UI 启动脚本 start_web_ui.py[/red]")
         return
 
-    console.print(f"[bold blue]正在启动 Web 界面...[/bold blue]")
+    console.print("[bold blue]正在启动 Web 界面...[/bold blue]")
     console.print(f"[dim]脚本路径: {web_ui_script}[/dim]")
-    
+
     try:
         # 使用当前 Python 解释器运行脚本
         subprocess.run([sys.executable, str(web_ui_script)], check=True)

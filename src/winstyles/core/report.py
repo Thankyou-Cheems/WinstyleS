@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from winstyles.core.update_checker import UpdateChecker, UpdateInfo
-from winstyles.domain.models import FontInfo, ScannedItem, ScanResult
+from winstyles.domain.models import OpenSourceFontInfo, ScannedItem, ScanResult
 from winstyles.domain.types import ChangeType
 from winstyles.utils.font_utils import find_font_path, get_font_version
 
@@ -28,7 +28,7 @@ class ClassifiedChanges:
     user_customizations: list[ScannedItem] = field(default_factory=list)
     version_differences: list[ScannedItem] = field(default_factory=list)
     system_defaults: list[ScannedItem] = field(default_factory=list)
-    detected_fonts: list[tuple[ScannedItem, FontInfo, UpdateInfo | None]] = field(
+    detected_fonts: list[tuple[ScannedItem, OpenSourceFontInfo, UpdateInfo | None]] = field(
         default_factory=list
     )
 
@@ -73,7 +73,7 @@ class ReportGenerator:
         self.scan_result = scan_result
         self.check_updates = check_updates
         self.update_checker = UpdateChecker()
-        self._font_db: list[FontInfo] = []
+        self._font_db: list[OpenSourceFontInfo] = []
         self._version_diffs: dict[str, dict[str, str]] = {}
         self._load_font_db()
 
@@ -100,7 +100,7 @@ class ReportGenerator:
 
         for font in data.get("fonts", []):
             self._font_db.append(
-                FontInfo(
+                OpenSourceFontInfo(
                     name=font["name"],
                     patterns=font.get("patterns", []),
                     homepage=font.get("homepage", ""),
@@ -113,7 +113,7 @@ class ReportGenerator:
         version_diffs = data.get("version_differences", {})
         self._version_diffs = version_diffs.get("font_substitutes", {})
 
-    def _match_font(self, font_name: str) -> FontInfo | None:
+    def _match_font(self, font_name: str) -> OpenSourceFontInfo | None:
         """匹配开源字体"""
         for font_info in self._font_db:
             for pattern in font_info.patterns:
@@ -316,12 +316,13 @@ class ReportGenerator:
                 --table-bg: #161b22;
                 --code-bg: #1f2428;
                 --accent: #58a6ff;
-                
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+                font-family: -apple-system, BlinkMacSystemFont, \
+                    'Segoe UI', Helvetica, Arial, sans-serif;
                 color: var(--text-color);
                 line-height: 1.6;
             }
-            
+
             .winstyles-report h1 {
                 color: var(--heading-color);
                 border-bottom: 1px solid var(--border-color);

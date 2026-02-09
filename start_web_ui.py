@@ -1,11 +1,10 @@
 
 import http.server
-import socketserver
 import json
-import subprocess
 import os
+import socketserver
+import subprocess
 import sys
-import threading
 import webbrowser
 from pathlib import Path
 
@@ -55,15 +54,13 @@ def get_report_generator(scan_result, check_updates=True):
 class ApiHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         # Silence logs to avoid cluttering if needed, or keep for debugging
-        sys.stderr.write("%s - - [%s] %s\n" %
-                         (self.client_address[0],
-                          self.log_date_time_string(),
-                          format%args))
+        sys.stderr.write(f"{self.client_address[0]} - - "
+                         f"[{self.log_date_time_string()}] {format % args}\n")
 
     def do_GET(self):
         if self.path == "/":
             self.path = "/index.html"
-        
+
         # Serve static files from frontend directory
         self.directory = str(FRONTEND_DIR)
         super().do_GET()
@@ -84,20 +81,21 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         command_name = self.path.replace("/api/", "")
-        
+
         try:
             result = self.dispatch_command(command_name, payload)
-            
+
             # Send response
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            
-            # If the result is a dict/list, dump it. If it's a string (JSON string from CLI), dump it as a string.
+
+            # If the result is a dict/list, dump it.
+            # If it's a string (JSON string from CLI), dump it as a string.
             # Tauri backend returns a String which contains JSON.
             # So here we return a JSON stringified String.
             self.wfile.write(json.dumps(result).encode('utf-8'))
-            
+
         except Exception as e:
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
@@ -108,37 +106,39 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         # In frozen mode, call modules directly
         if IS_FROZEN:
             return self.dispatch_command_direct(name, payload)
-        
+
         # In development mode, use subprocess
         if name == "scan":
-            return self.run_cli_command(CMD_MAP["scan"], payload, 
+            return self.run_cli_command(CMD_MAP["scan"], payload,
                                       args_mapper=self.map_scan_args)
         elif name == "export_config":
-            return self.run_cli_command(CMD_MAP["export_config"], payload, 
+            return self.run_cli_command(CMD_MAP["export_config"], payload,
                                       args_mapper=self.map_export_args)
         elif name == "import_config":
-            return self.run_cli_command(CMD_MAP["import_config"], payload, 
+            return self.run_cli_command(CMD_MAP["import_config"], payload,
                                       args_mapper=self.map_import_args)
         elif name == "generate_report":
             # Report usually returns text content
-            args = [sys.executable, "-m", "winstyles", "report", "-f", payload.get("format", "markdown")]
+            args = [
+                sys.executable, "-m", "winstyles", "report", "-f", payload.get("format", "markdown")
+            ]
             return self.run_cli_command_raw(args)
-        
+
         elif name == "check_font_updates":
             # Not implemented in CLI yet, return empty list
             return json.dumps([])
-        
+
         elif name == "open_output_folder":
             os.startfile(os.getcwd())
             return ""
-            
+
         elif name == "open_report_in_browser":
             # Just ignore or handle if needed
             return ""
-        
+
         elif name == "browse_save_path" or name == "browse_open_path":
              return "" # Not supported in web mode
-            
+
         else:
             raise ValueError(f"Unknown command: {name}")
 
@@ -147,11 +147,11 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         if name == "scan":
             engine = get_engine()
             categories = payload.get("categories")
-            modified_only = payload.get("modifiedOnly", False)
+            # modified_only = payload.get("modifiedOnly", False)
             result = engine.scan_all(categories=categories)
             # Convert to JSON
             return result.model_dump_json()
-        
+
         elif name == "generate_report":
             engine = get_engine()
             result = engine.scan_all(categories=None)
@@ -161,28 +161,28 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
                 return generator.generate_html()
             else:
                 return generator.generate_markdown()
-        
+
         elif name == "check_font_updates":
             return json.dumps([])
-        
+
         elif name == "open_output_folder":
             os.startfile(os.getcwd())
             return ""
-        
+
         elif name == "open_report_in_browser":
             return ""
-        
+
         elif name == "browse_save_path" or name == "browse_open_path":
             return ""
-        
+
         elif name == "export_config":
             # TODO: Implement direct export
             return json.dumps({"error": "Export not yet supported in packaged mode"})
-        
+
         elif name == "import_config":
             # TODO: Implement direct import
             return json.dumps({"error": "Import not yet supported in packaged mode"})
-        
+
         else:
             raise ValueError(f"Unknown command: {name}")
 
@@ -200,19 +200,19 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         env["WINSTYLES_WEB_MODE"] = "1"
-        
+
         result = subprocess.run(
-            cmd, 
+            cmd,
             cwd=str(SRC_DIR),
             capture_output=True,
             text=True,
             encoding='utf-8',
             env=env
         )
-        
+
         if result.returncode != 0:
             raise Exception(f"Command failed: {result.stderr}")
-            
+
         return result.stdout.strip()
 
     # Argument Mappers
@@ -223,10 +223,10 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
                 # Ensure we don't double encode if categories is a list of strings
                 if isinstance(cat, str):
                    args.extend(["-c", cat])
-        
+
         if payload.get("modifiedOnly"):
             args.append("--modified-only")
-            
+
         return args
 
     def map_export_args(self, payload):
@@ -235,12 +235,12 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         if not path:
             raise ValueError("Path is required")
         args.append(path)
-        
+
         if payload.get("categories"):
             for cat in payload.get("categories").split(","):
                 if cat.strip():
                     args.extend(["-c", cat.strip()])
-        
+
         if payload.get("includeDefaults"):
             args.append("--include-defaults")
         return args
@@ -251,7 +251,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         if not path:
              raise ValueError("Path is required")
         args.append(path)
-        
+
         if payload.get("dryRun"):
             args.append("--dry-run")
         if payload.get("skipRestore"):

@@ -5,6 +5,7 @@
 from winstyles.domain.models import (
     FontInfo,
     Manifest,
+    OpenSourceFontInfo,
     RegistryEntry,
     ScannedItem,
     ScanResult,
@@ -18,6 +19,7 @@ __all__ = [
     "Manifest",
     "SourceSystem",
     "FontInfo",
+    "OpenSourceFontInfo",
     "RegistryEntry",
     "ChangeType",
     "Category",
