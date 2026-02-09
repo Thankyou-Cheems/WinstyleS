@@ -332,13 +332,14 @@ class StyleEngine:
 
         scan_data = json.loads(scan_path.read_text(encoding="utf-8"))
         scan_result = ScanResult.model_validate(scan_data)
+        resolved_scan = self._resolve_import_assets(scan_result, package_dir)
 
         if dry_run:
             return {
-                "total": len(scan_result.items),
+                "total": len(resolved_scan.items),
                 "applied": 0,
                 "failed": 0,
-                "skipped": len(scan_result.items),
+                "skipped": len(resolved_scan.items),
             }
 
         if create_restore_point:
@@ -349,7 +350,7 @@ class StyleEngine:
         failed = 0
         skipped = 0
 
-        for item in scan_result.items:
+        for item in resolved_scan.items:
             scanner = self._find_scanner_for_category(item.category)
             if scanner is None:
                 skipped += 1
@@ -363,11 +364,81 @@ class StyleEngine:
                 failed += 1
 
         return {
-            "total": len(scan_result.items),
+            "total": len(resolved_scan.items),
             "applied": applied,
             "failed": failed,
             "skipped": skipped,
         }
+
+    def _resolve_import_assets(self, scan_result: ScanResult, package_dir: Path) -> ScanResult:
+        assets_root = package_dir / "assets"
+        if not assets_root.exists():
+            return scan_result
+
+        home_root = Path.home() / ".winstyles" / "imported_assets" / scan_result.scan_id
+        home_root.mkdir(parents=True, exist_ok=True)
+
+        rewritten_items: list[ScannedItem] = []
+        for item in scan_result.items:
+            rewritten_files = []
+            for file in item.associated_files:
+                source_path = Path(file.path)
+                if source_path.exists():
+                    rewritten_files.append(file)
+                    continue
+
+                package_file = self._find_asset_in_package(
+                    assets_root / item.category,
+                    file.name,
+                )
+                if package_file is None:
+                    rewritten_files.append(file)
+                    continue
+
+                target_dir = home_root / item.category
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target_path = target_dir / package_file.name
+                if not target_path.exists():
+                    shutil.copy2(package_file, target_path)
+
+                rewritten_files.append(
+                    file.model_copy(
+                        update={
+                            "path": str(target_path),
+                            "exists": True,
+                            "size_bytes": target_path.stat().st_size,
+                        }
+                    )
+                )
+
+            updated_item = item.model_copy(update={"associated_files": rewritten_files})
+            if rewritten_files:
+                if updated_item.key in {"wallpaper.path", "wallpaper.transcoded"}:
+                    updated_item = updated_item.model_copy(
+                        update={"current_value": rewritten_files[0].path}
+                    )
+                elif updated_item.key.startswith("cursor."):
+                    updated_item = updated_item.model_copy(
+                        update={"current_value": rewritten_files[0].path}
+                    )
+            rewritten_items.append(updated_item)
+
+        return scan_result.model_copy(update={"items": rewritten_items})
+
+    def _find_asset_in_package(self, category_dir: Path, name: str) -> Path | None:
+        if not category_dir.exists():
+            return None
+
+        exact = category_dir / name
+        if exact.exists():
+            return exact
+
+        stem = Path(name).stem
+        suffix = Path(name).suffix
+        for candidate in category_dir.glob(f"{stem}_*{suffix}"):
+            if candidate.is_file():
+                return candidate
+        return None
 
     def load_scan_result(self, package_path: Path) -> ScanResult | None:
         data = self._read_json_from_package(Path(package_path), "scan.json")

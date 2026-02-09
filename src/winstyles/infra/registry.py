@@ -135,6 +135,8 @@ class WindowsRegistryAdapter(IRegistryAdapter):
                 value_type = winreg.REG_DWORD
             elif isinstance(value, bytes):
                 value_type = winreg.REG_BINARY
+            elif isinstance(value, list) and all(isinstance(v, str) for v in value):
+                value_type = winreg.REG_MULTI_SZ
             else:
                 value_type = winreg.REG_SZ
                 value = str(value)

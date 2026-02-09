@@ -16,6 +16,10 @@
 - 修复报告“检查字体更新”开关始终生效的问题，新增 `--check-updates/--no-check-updates`
 - 修复 Web 前端未绑定功能：字体数据库刷新、导出预览、导出日志复制、扫描格式选择
 - 修复 Windows 非 UTF-8 控制台执行 `winstyles report` 时的编码异常（改为 ASCII 转义输出）
+- 修复跨设备导入时资产路径失效问题：导入会将包内 assets 重定位到 `~/.winstyles/imported_assets/<scan_id>`
+- 修复 Windows Terminal 导入未实现问题：支持将扫描项写回本机 `settings.json`
+- 修复 PowerShell Profile 跨用户路径问题：导入时写入当前用户 Profile 路径
+- 修复注册表写入 `REG_MULTI_SZ` 推断，确保 FontLink 多字符串值可正确导入
 
 ### Changed
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发

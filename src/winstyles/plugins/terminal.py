@@ -112,8 +112,37 @@ class WindowsTerminalScanner(BaseScanner):
 
     def apply(self, item: ScannedItem) -> bool:
         """应用 Windows Terminal 设置"""
-        # TODO: 实现设置应用逻辑
-        return False
+        settings_path = self._find_settings_path()
+        if not settings_path:
+            return False
+
+        if not item.key.startswith("windowsTerminal."):
+            return False
+
+        try:
+            raw = self._fs.read_text(str(settings_path))
+            settings = json.loads(raw)
+        except Exception:
+            settings = {}
+
+        key_tail = item.key.replace("windowsTerminal.", "")
+        if key_tail.startswith("defaults."):
+            path_parts = ["profiles", "defaults", *key_tail.replace("defaults.", "", 1).split(".")]
+        else:
+            path_parts = key_tail.split(".")
+        if not path_parts:
+            return False
+
+        try:
+            self._set_nested_value(settings, path_parts, item.current_value)
+            self._fs.write_text(
+                str(settings_path),
+                json.dumps(settings, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            return True
+        except Exception:
+            return False
 
     def _flatten_profile_defaults(
         self,
@@ -129,6 +158,21 @@ class WindowsTerminalScanner(BaseScanner):
             else:
                 flattened.append((full_key, value))
         return flattened
+
+    def _set_nested_value(
+        self,
+        container: dict[str, object],
+        path_parts: list[str],
+        value: object,
+    ) -> None:
+        current: dict[str, object] = container
+        for part in path_parts[:-1]:
+            next_value = current.get(part)
+            if not isinstance(next_value, dict):
+                next_value = {}
+                current[part] = next_value
+            current = next_value
+        current[path_parts[-1]] = value
 
 
 class PowerShellProfileScanner(BaseScanner):
@@ -208,7 +252,29 @@ class PowerShellProfileScanner(BaseScanner):
         try:
             if not isinstance(item.current_value, str):
                 return False
-            self._fs.write_text(item.source_path, item.current_value, encoding="utf-8")
+            target_path = self._resolve_target_profile_path(item)
+            self._fs.write_text(str(target_path), item.current_value, encoding="utf-8")
             return True
         except Exception:
             return False
+
+    def _resolve_target_profile_path(self, item: ScannedItem) -> Path:
+        existing_paths = self._get_profile_paths()
+        if item.key.endswith(".WindowsPowerShell"):
+            for path in existing_paths:
+                if path.parent.name == "WindowsPowerShell":
+                    return path
+        elif item.key.endswith(".PowerShell"):
+            for path in existing_paths:
+                if path.parent.name == "PowerShell":
+                    return path
+
+        user_profile = Path(os.environ.get("USERPROFILE", ""))
+        if item.key.endswith(".WindowsPowerShell"):
+            return (
+                user_profile
+                / "Documents"
+                / "WindowsPowerShell"
+                / "Microsoft.PowerShell_profile.ps1"
+            )
+        return user_profile / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"

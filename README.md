@@ -62,6 +62,11 @@ winstyles import ./my-style.zip
 winstyles report --no-check-updates
 ```
 
+跨设备迁移建议（最小可用）：
+- 导出端使用：`winstyles export ./my-style.zip --include-font-files`
+- 导入端先预览：`winstyles import ./my-style.zip --dry-run`
+- 确认后执行：`winstyles import ./my-style.zip`
+
 ### 启动 Web GUI
 ```bash
 python -m winstyles gui
