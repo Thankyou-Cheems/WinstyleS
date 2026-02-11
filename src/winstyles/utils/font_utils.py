@@ -4,14 +4,23 @@
 提供字体文件查找和版本读取功能
 """
 
+import importlib
 import os
 import winreg
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
+
+TTFontLoader = Callable[[Path], Any]
+_TTFONT_LOADER: TTFontLoader | None = None
 
 try:
-    from fontTools.ttLib import TTFont
-except ImportError:
-    TTFont = None  # type: ignore
+    _ttlib = importlib.import_module("fontTools.ttLib")
+    _ttfont = getattr(_ttlib, "TTFont", None)
+    if callable(_ttfont):
+        _TTFONT_LOADER = _ttfont
+except Exception:
+    _TTFONT_LOADER = None
 
 GENERIC_FONT_FAMILIES = {
     "serif",
@@ -149,20 +158,21 @@ def get_font_version(file_path: Path) -> str | None:
     Returns:
         str: 版本字符串 (如 "Version 1.00"), 失败返回 None
     """
-    if not TTFont:
+    if _TTFONT_LOADER is None:
         return None
 
     try:
-        font = TTFont(file_path)
+        font = _TTFONT_LOADER(file_path)
         # ID 5 是 Version 字符串
         # 遍历 name records 寻找英文版本信息
         version = None
-        for record in font["name"].names:
-            if record.nameID == 5:
-                # 尝试获取 Unicode 字符串
-                text = record.toUnicode()
+        name_table = font["name"]
+
+        for record in getattr(name_table, "names", []):
+            if getattr(record, "nameID", None) == 5:
+                text = str(record.toUnicode())
                 # 优先取 PlatformID=3 (Windows) 的记录
-                if record.platformID == 3:
+                if getattr(record, "platformID", None) == 3:
                     return text
                 version = text
 

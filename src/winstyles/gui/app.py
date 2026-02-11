@@ -16,13 +16,23 @@ import tempfile
 import threading
 import webbrowser
 from pathlib import Path
+from typing import TypedDict
 
 import customtkinter as ctk  # type: ignore[import-untyped]
 
 from winstyles.core.engine import StyleEngine
 from winstyles.core.report import ReportGenerator
 from winstyles.core.update_checker import UpdateChecker
+from winstyles.domain.models import ScanResult
 from winstyles.utils.font_utils import find_font_path, get_font_version
+
+
+class FontUpdateEntry(TypedDict):
+    name: str
+    current_version: str
+    latest_version: str
+    download_url: str
+    has_update: bool
 
 
 class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
@@ -74,8 +84,8 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         self.pages: dict[str, ctk.CTkFrame] = {}
 
         # 数据
-        self._scan_result = None
-        self._font_updates: list = []
+        self._scan_result: ScanResult | None = None
+        self._font_updates: list[FontUpdateEntry] = []
 
         # 创建界面
         self._create_widgets()
@@ -621,7 +631,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
                 self.after(0, lambda: self.set_status("无法获取字体数据库", "red"))
                 return
 
-            updates = []
+            updates: list[FontUpdateEntry] = []
             fonts_info = db.get("fonts", [])
 
             # 匹配已安装字体
@@ -652,6 +662,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
                         # 构造开源字体信息对象用于检查更新
                         from winstyles.domain.models import OpenSourceFontInfo
+
                         fi = OpenSourceFontInfo(
                             name=name,
                             patterns=patterns,
@@ -661,13 +672,15 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
                         update_info = checker.check_font_update(fi, local_version)
                         if update_info:
-                            updates.append({
-                                "name": name,
-                                "current_version": update_info.current_version,
-                                "latest_version": update_info.latest_version,
-                                "download_url": update_info.download_url,
-                                "has_update": update_info.has_update,
-                            })
+                            updates.append(
+                                FontUpdateEntry(
+                                    name=name,
+                                    current_version=update_info.current_version,
+                                    latest_version=update_info.latest_version,
+                                    download_url=update_info.download_url,
+                                    has_update=update_info.has_update,
+                                )
+                            )
                         break
 
             self._font_updates = updates
@@ -680,7 +693,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
         finally:
             self.after(0, lambda: self.check_updates_btn.configure(state="normal"))
 
-    def _show_updates_result(self, updates: list) -> None:
+    def _show_updates_result(self, updates: list[FontUpdateEntry]) -> None:
         # 清空容器
         for widget in self.updates_container.winfo_children():
             widget.destroy()
@@ -732,7 +745,7 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
                 card.grid(row=row, column=0, sticky="ew", pady=4)
                 row += 1
 
-    def _create_update_card(self, update: dict, has_update: bool) -> ctk.CTkFrame:
+    def _create_update_card(self, update: FontUpdateEntry, has_update: bool) -> ctk.CTkFrame:
         card = ctk.CTkFrame(
             self.updates_container,
             corner_radius=8,
@@ -883,8 +896,10 @@ class WinstyleSApp(ctk.CTk):  # type: ignore[misc]
 
         about_text = ctk.CTkLabel(
             about_frame,
-            text=("WinstyleS - Windows Style Sync\n版本 0.1.0\n\n"
-                  "自动扫描、导出、同步你的 Windows 美化配置"),
+            text=(
+                "WinstyleS - Windows Style Sync\n版本 0.1.0\n\n"
+                "自动扫描、导出、同步你的 Windows 美化配置"
+            ),
             font=self.font_body,
             text_color=self.COLOR_MUTED,
             justify="left",
@@ -946,6 +961,7 @@ def run_gui() -> None:
         pass
     except Exception as e:
         console.print(f"[red]Web UI 启动失败: {e}[/red]")
+
 
 if __name__ == "__main__":
     run_gui()

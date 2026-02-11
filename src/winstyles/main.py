@@ -2,9 +2,11 @@
 WinstyleS CLI 主入口 - 使用 Typer 构建命令行界面
 """
 
+import importlib
 import json
 import os
 from pathlib import Path
+from typing import Protocol, cast
 
 import typer
 from rich.console import Console
@@ -23,6 +25,19 @@ app = typer.Typer(
 )
 
 console = Console()
+
+
+class _YamlModule(Protocol):
+    def safe_dump(self, data: object, **kwargs: object) -> str: ...
+
+
+def _load_yaml_module() -> _YamlModule:
+    try:
+        module = importlib.import_module("yaml")
+    except ModuleNotFoundError:
+        console.print("[red]YAML 输出需要安装 PyYAML: pip install pyyaml[/red]")
+        raise typer.Exit(code=1)
+    return cast(_YamlModule, module)
 
 
 def version_callback(value: bool) -> None:
@@ -576,20 +591,12 @@ def _shorten_value(value: object, max_len: int = 80) -> str:
 
 
 def _print_yaml(payload: dict[str, object]) -> None:
-    try:
-        import yaml
-    except ModuleNotFoundError:
-        console.print("[red]YAML 输出需要安装 PyYAML: pip install pyyaml[/red]")
-        raise typer.Exit(code=1)
+    yaml = _load_yaml_module()
     console.print(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False))
 
 
 def _write_yaml(output_path: Path, payload: dict[str, object]) -> None:
-    try:
-        import yaml
-    except ModuleNotFoundError:
-        console.print("[red]YAML 输出需要安装 PyYAML: pip install pyyaml[/red]")
-        raise typer.Exit(code=1)
+    yaml = _load_yaml_module()
     output_path.write_text(
         yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8"
     )
@@ -655,7 +662,13 @@ def _print_diff_output(payload: dict[str, object], fmt: str) -> None:
     table.add_column("Before", style="yellow")
     table.add_column("After", style="green")
 
-    for item in payload.get("items", []):
+    items = payload.get("items", [])
+    if not isinstance(items, list):
+        items = []
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
         table.add_row(
             str(item.get("category", "")),
             str(item.get("key", "")),

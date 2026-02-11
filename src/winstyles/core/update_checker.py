@@ -72,7 +72,9 @@ class UpdateChecker:
         try:
             with urllib.request.urlopen(url, timeout=5) as response:
                 if response.status == 200:
-                    return json.loads(response.read().decode("utf-8"))
+                    payload = json.loads(response.read().decode("utf-8"))
+                    if isinstance(payload, dict):
+                        return payload
         except Exception:
             pass
         return None
@@ -171,9 +173,11 @@ class UpdateChecker:
 
         with urllib.request.urlopen(req, timeout=5) as response:
             if response.status == 200:
-                data = json.loads(response.read().decode("utf-8"))
-                tag_name = data.get("tag_name", "")
-                html_url = data.get("html_url", "")
+                payload = json.loads(response.read().decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("Invalid GitHub API response")
+                tag_name = str(payload.get("tag_name", ""))
+                html_url = str(payload.get("html_url", ""))
                 return tag_name, html_url
 
         raise ValueError("Failed to fetch GitHub release")

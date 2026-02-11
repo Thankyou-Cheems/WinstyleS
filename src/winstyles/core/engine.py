@@ -261,9 +261,14 @@ class StyleEngine:
         source_system = self._build_source_system()
         export_options = self._build_export_options(scan_result)
 
-        manifest = Manifest(
-            source_system=source_system,
-            export_options=export_options,
+        manifest = Manifest.model_validate(
+            {
+                "$schema": "1.0.0",
+                "version": "1.0.0",
+                "created_by": "WinstyleS",
+                "source_system": source_system.model_dump(mode="json"),
+                "export_options": export_options.model_dump(mode="json"),
+            }
         )
 
         manifest_path = output_dir / "manifest.json"
@@ -467,7 +472,10 @@ class StyleEngine:
                     if filename not in zip_ref.namelist():
                         return None
                     with zip_ref.open(filename) as handle:
-                        return json.loads(handle.read().decode("utf-8"))
+                        payload = json.loads(handle.read().decode("utf-8"))
+                        if isinstance(payload, dict):
+                            return payload
+                        return None
             except (OSError, KeyError, json.JSONDecodeError):
                 return None
 
@@ -475,7 +483,10 @@ class StyleEngine:
         if not file_path.exists():
             return None
         try:
-            return json.loads(file_path.read_text(encoding="utf-8"))
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+            return None
         except (OSError, json.JSONDecodeError):
             return None
 

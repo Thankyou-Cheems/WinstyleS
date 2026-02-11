@@ -84,7 +84,7 @@ class VSCodeScanner(BaseScanner):
     def _get_nested_value(self, data: dict[str, Any], key: str) -> Any:
         """获取嵌套的设置值"""
         parts = key.split(".")
-        current = data
+        current: Any = data
         for part in parts:
             if not isinstance(current, dict):
                 return None
@@ -189,7 +189,10 @@ class VSCodeScanner(BaseScanner):
         content = re.sub(r",(\s*[}\]])", r"\1", content)
 
         try:
-            return json.loads(content)
+            parsed = json.loads(content)
+            if isinstance(parsed, dict):
+                return {str(key): value for key, value in parsed.items()}
+            return {}
         except json.JSONDecodeError:
             return {}
 
