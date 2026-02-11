@@ -766,7 +766,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================
 
   document.getElementById("copyOutput")?.addEventListener("click", () => {
-    copyToClipboard("scanOutput");
+    copyToClipboard("scanResults");
   });
 
   document.getElementById("copyReport")?.addEventListener("click", () => {

@@ -4,9 +4,16 @@
 提供统一的注册表操作接口，并支持 Mock 测试。
 """
 
-import winreg
 from abc import ABC, abstractmethod
 from typing import Any
+
+try:
+    import winreg as _winreg
+except ModuleNotFoundError:  # pragma: no cover - only hit on non-Windows platforms
+    _winreg = None  # type: ignore[assignment]
+
+REG_DWORD = getattr(_winreg, "REG_DWORD", 4)
+REG_SZ = getattr(_winreg, "REG_SZ", 1)
 
 
 class IRegistryAdapter(ABC):
@@ -72,16 +79,22 @@ class WindowsRegistryAdapter(IRegistryAdapter):
     """真实的 Windows 注册表适配器"""
 
     # 根键映射
-    HKEY_MAP = {
-        "HKLM": winreg.HKEY_LOCAL_MACHINE,
-        "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
-        "HKCU": winreg.HKEY_CURRENT_USER,
-        "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
-        "HKCR": winreg.HKEY_CLASSES_ROOT,
-        "HKEY_CLASSES_ROOT": winreg.HKEY_CLASSES_ROOT,
-        "HKU": winreg.HKEY_USERS,
-        "HKEY_USERS": winreg.HKEY_USERS,
-    }
+    HKEY_MAP: dict[str, int] = {}
+    if _winreg is not None:
+        HKEY_MAP = {
+            "HKLM": _winreg.HKEY_LOCAL_MACHINE,
+            "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
+            "HKCU": _winreg.HKEY_CURRENT_USER,
+            "HKEY_CURRENT_USER": _winreg.HKEY_CURRENT_USER,
+            "HKCR": _winreg.HKEY_CLASSES_ROOT,
+            "HKEY_CLASSES_ROOT": _winreg.HKEY_CLASSES_ROOT,
+            "HKU": _winreg.HKEY_USERS,
+            "HKEY_USERS": _winreg.HKEY_USERS,
+        }
+
+    def _ensure_available(self) -> None:
+        if _winreg is None:
+            raise OSError("winreg is not available on this platform")
 
     def _parse_key_path(self, key_path: str) -> tuple[int, str]:
         """
@@ -93,6 +106,7 @@ class WindowsRegistryAdapter(IRegistryAdapter):
         Returns:
             (根键句柄, 子键路径) 的元组
         """
+        self._ensure_available()
         parts = key_path.split("\\", 1)
         if len(parts) != 2:
             raise ValueError(f"Invalid registry path: {key_path}")
@@ -111,10 +125,12 @@ class WindowsRegistryAdapter(IRegistryAdapter):
         value_name: str,
     ) -> tuple[Any, int]:
         """获取注册表值"""
+        self._ensure_available()
+        assert _winreg is not None
         root_key, sub_key = self._parse_key_path(key_path)
 
-        with winreg.OpenKey(root_key, sub_key, 0, winreg.KEY_READ) as key:
-            value, value_type = winreg.QueryValueEx(key, value_name)
+        with _winreg.OpenKey(root_key, sub_key, 0, _winreg.KEY_READ) as key:
+            value, value_type = _winreg.QueryValueEx(key, value_name)
             return value, value_type
 
     def set_value(
@@ -125,36 +141,40 @@ class WindowsRegistryAdapter(IRegistryAdapter):
         value_type: int | None = None,
     ) -> None:
         """设置注册表值"""
+        self._ensure_available()
+        assert _winreg is not None
         root_key, sub_key = self._parse_key_path(key_path)
 
         # 如果未指定类型，尝试推断
         if value_type is None:
             if isinstance(value, str):
-                value_type = winreg.REG_SZ
+                value_type = _winreg.REG_SZ
             elif isinstance(value, int):
-                value_type = winreg.REG_DWORD
+                value_type = _winreg.REG_DWORD
             elif isinstance(value, bytes):
-                value_type = winreg.REG_BINARY
+                value_type = _winreg.REG_BINARY
             elif isinstance(value, list) and all(isinstance(v, str) for v in value):
-                value_type = winreg.REG_MULTI_SZ
+                value_type = _winreg.REG_MULTI_SZ
             else:
-                value_type = winreg.REG_SZ
+                value_type = _winreg.REG_SZ
                 value = str(value)
 
-        with winreg.OpenKey(root_key, sub_key, 0, winreg.KEY_SET_VALUE) as key:
-            winreg.SetValueEx(key, value_name, 0, value_type, value)
+        with _winreg.OpenKey(root_key, sub_key, 0, _winreg.KEY_SET_VALUE) as key:
+            _winreg.SetValueEx(key, value_name, 0, value_type, value)
 
     def get_all_values(self, key_path: str) -> dict[str, Any]:
         """获取键下的所有值"""
+        self._ensure_available()
+        assert _winreg is not None
         root_key, sub_key = self._parse_key_path(key_path)
         values: dict[str, Any] = {}
 
         try:
-            with winreg.OpenKey(root_key, sub_key, 0, winreg.KEY_READ) as key:
+            with _winreg.OpenKey(root_key, sub_key, 0, _winreg.KEY_READ) as key:
                 i = 0
                 while True:
                     try:
-                        name, value, _ = winreg.EnumValue(key, i)
+                        name, value, _ = _winreg.EnumValue(key, i)
                         values[name] = value
                         i += 1
                     except OSError:
@@ -167,10 +187,14 @@ class WindowsRegistryAdapter(IRegistryAdapter):
     def key_exists(self, key_path: str) -> bool:
         """检查键是否存在"""
         try:
+            self._ensure_available()
+            assert _winreg is not None
             root_key, sub_key = self._parse_key_path(key_path)
-            with winreg.OpenKey(root_key, sub_key, 0, winreg.KEY_READ):
+            with _winreg.OpenKey(root_key, sub_key, 0, _winreg.KEY_READ):
                 return True
         except FileNotFoundError:
+            return False
+        except OSError:
             return False
 
 
@@ -201,8 +225,8 @@ class MockRegistryAdapter(IRegistryAdapter):
         value = key_data[value_name]
         # 简单推断类型
         if isinstance(value, int):
-            return value, winreg.REG_DWORD
-        return value, winreg.REG_SZ
+            return value, REG_DWORD
+        return value, REG_SZ
 
     def set_value(
         self,
