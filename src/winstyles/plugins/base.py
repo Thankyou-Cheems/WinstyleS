@@ -113,6 +113,14 @@ class BaseScanner(ABC):
         """
         return {}
 
+    def supports_item(self, item: "ScannedItem") -> bool:
+        """
+        判断该扫描器是否可应用某条扫描项。
+
+        默认按 category 匹配，子类可覆盖以支持更细粒度路由。
+        """
+        return item.category == self.category
+
     def validate(self) -> bool:
         """
         验证扫描器是否可用

@@ -9,6 +9,8 @@ TerminalScanner - 终端配置扫描器
 
 import json
 import os
+import re
+import shutil
 from pathlib import Path
 
 from winstyles.domain.models import AssociatedFile, ScannedItem
@@ -37,6 +39,9 @@ class WindowsTerminalScanner(BaseScanner):
     @property
     def description(self) -> str:
         return "扫描 Windows Terminal 配置"
+
+    def supports_item(self, item: ScannedItem) -> bool:
+        return item.key.startswith("windowsTerminal.")
 
     def _find_settings_path(self) -> Path | None:
         """查找 Windows Terminal 设置文件路径"""
@@ -221,6 +226,9 @@ class PowerShellProfileScanner(BaseScanner):
     def description(self) -> str:
         return "扫描 PowerShell 配置文件"
 
+    def supports_item(self, item: ScannedItem) -> bool:
+        return item.key.startswith("powershell.profile.")
+
     def _get_profile_paths(self) -> list[Path]:
         """获取所有可能的 Profile 路径"""
         user_profile = os.environ.get("USERPROFILE", "")
@@ -303,3 +311,173 @@ class PowerShellProfileScanner(BaseScanner):
                 / "Microsoft.PowerShell_profile.ps1"
             )
         return user_profile / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"
+
+
+class OhMyPoshScanner(BaseScanner):
+    """
+    Oh My Posh 检测扫描器
+    """
+
+    @property
+    def id(self) -> str:
+        return "oh_my_posh"
+
+    @property
+    def name(self) -> str:
+        return "Oh My Posh"
+
+    @property
+    def category(self) -> str:
+        return "terminal"
+
+    @property
+    def description(self) -> str:
+        return "扫描 Oh My Posh 安装状态与主题配置"
+
+    def supports_item(self, item: ScannedItem) -> bool:
+        return item.key.startswith("ohMyPosh.")
+
+    def scan(self) -> list[ScannedItem]:
+        items: list[ScannedItem] = []
+
+        executable = self._find_executable()
+        installed = executable is not None
+        executable_path = str(executable) if executable else ""
+
+        installed_metadata: dict[str, object] = {
+            "executable_path": executable_path,
+            "readonly": True,
+        }
+        items.append(
+            ScannedItem(
+                category=self.category,
+                key="ohMyPosh.installed",
+                current_value=installed,
+                default_value=None,
+                change_type=ChangeType.MODIFIED,
+                source_type=SourceType.FILE,
+                source_path=executable_path or "oh-my-posh",
+                metadata=installed_metadata,
+            )
+        )
+
+        for profile_path in self._get_profile_paths():
+            try:
+                content = self._fs.read_text(str(profile_path))
+            except Exception:
+                continue
+
+            theme_path = self._extract_theme_path(content, profile_path)
+            if theme_path is None:
+                continue
+
+            associated_files: list[AssociatedFile] = []
+            if theme_path.exists():
+                try:
+                    size = theme_path.stat().st_size
+                except OSError:
+                    size = None
+                associated_files.append(
+                    AssociatedFile(
+                        type=AssetType.CONFIG,
+                        name=theme_path.name,
+                        path=str(theme_path),
+                        exists=True,
+                        size_bytes=size,
+                        sha256=None,
+                    )
+                )
+
+            items.append(
+                ScannedItem(
+                    category=self.category,
+                    key=f"ohMyPosh.theme.{profile_path.parent.name}",
+                    current_value=str(theme_path),
+                    default_value=None,
+                    change_type=ChangeType.MODIFIED,
+                    source_type=SourceType.FILE,
+                    source_path=str(profile_path),
+                    associated_files=associated_files,
+                    metadata={"readonly": True},
+                )
+            )
+
+        return items
+
+    def apply(self, item: ScannedItem) -> bool:
+        # 当前阶段仅做检测，不自动改写 Oh My Posh 配置
+        return item.key.startswith("ohMyPosh.")
+
+    def _find_executable(self) -> Path | None:
+        from_path = shutil.which("oh-my-posh")
+        if from_path:
+            path = Path(from_path)
+            if path.exists():
+                return path
+
+        candidates = [
+            Path(os.environ.get("LOCALAPPDATA", ""))
+            / "Programs"
+            / "oh-my-posh"
+            / "bin"
+            / "oh-my-posh.exe",
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+            / "oh-my-posh"
+            / "bin"
+            / "oh-my-posh.exe",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+
+    def _get_profile_paths(self) -> list[Path]:
+        user_profile = os.environ.get("USERPROFILE", "")
+        if not user_profile:
+            return []
+
+        paths = [
+            Path(user_profile) / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1",
+            Path(user_profile)
+            / "Documents"
+            / "WindowsPowerShell"
+            / "Microsoft.PowerShell_profile.ps1",
+        ]
+        return [path for path in paths if path.exists()]
+
+    def _extract_theme_path(self, content: str, profile_path: Path) -> Path | None:
+        for line in content.splitlines():
+            if "oh-my-posh" not in line or "init" not in line:
+                continue
+            match = re.search(r"--config\s+(\"[^\"]+\"|'[^']+'|[^\s|]+)", line)
+            if not match:
+                continue
+            raw_path = match.group(1).strip().strip("'\"")
+            return self._normalize_theme_path(raw_path, profile_path)
+
+        for line in content.splitlines():
+            match = re.search(r"POSH_THEME\s*=\s*(\"[^\"]+\"|'[^']+'|[^\s;]+)", line)
+            if not match:
+                continue
+            raw_path = match.group(1).strip().strip("'\"")
+            return self._normalize_theme_path(raw_path, profile_path)
+
+        return None
+
+    def _normalize_theme_path(self, raw_path: str, profile_path: Path) -> Path:
+        expanded = self._expand_powershell_env(raw_path)
+        candidate = Path(expanded)
+        if candidate.is_absolute():
+            return candidate
+        return (profile_path.parent / candidate).resolve()
+
+    def _expand_powershell_env(self, raw: str) -> str:
+        expanded = raw
+        for name, value in os.environ.items():
+            expanded = re.sub(
+                rf"\$env:{re.escape(name)}",
+                lambda _: value,
+                expanded,
+                flags=re.IGNORECASE,
+            )
+        return os.path.expandvars(expanded)

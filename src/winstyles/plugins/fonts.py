@@ -7,12 +7,15 @@ FontScanner - 系统字体扫描器
 - 已安装字体列表
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
 from winstyles.domain.models import AssociatedFile, ScannedItem
 from winstyles.domain.types import AssetType, ChangeType, SourceType
+from winstyles.infra.registry import REG_DWORD
 from winstyles.plugins.base import BaseScanner
+from winstyles.utils.font_utils import get_font_version, identify_opensource
 
 
 class FontSubstitutesScanner(BaseScanner):
@@ -40,6 +43,9 @@ class FontSubstitutesScanner(BaseScanner):
     @property
     def description(self) -> str:
         return "扫描系统字体替换规则 (FontSubstitutes)"
+
+    def supports_item(self, item: ScannedItem) -> bool:
+        return item.source_path.startswith(f"HKLM\\{self.REGISTRY_PATH}\\")
 
     def scan(self) -> list[ScannedItem]:
         """扫描字体替换注册表项"""
@@ -167,6 +173,9 @@ class FontLinkScanner(BaseScanner):
     def description(self) -> str:
         return "扫描字体链接规则 (FontLink)"
 
+    def supports_item(self, item: ScannedItem) -> bool:
+        return item.source_path.startswith(f"HKLM\\{self.REGISTRY_PATH}\\")
+
     def scan(self) -> list[ScannedItem]:
         """扫描字体链接注册表项"""
         items: list[ScannedItem] = []
@@ -240,3 +249,232 @@ class FontLinkScanner(BaseScanner):
                 )
             )
         return files
+
+
+class InstalledFontsScanner(BaseScanner):
+    """
+    已安装字体与 ClearType 扫描器
+
+    扫描:
+    - HKLM/HKCU 字体清单
+    - ClearType 状态与参数
+    """
+
+    MACHINE_FONTS_REGISTRY_PATH = r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+    USER_FONTS_REGISTRY_PATH = r"HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+    CLEARTYPE_REGISTRY_PATH = r"HKCU\Control Panel\Desktop"
+
+    CLEARTYPE_VALUE_MAP = {
+        "FontSmoothing": "cleartype.enabled",
+        "FontSmoothingType": "cleartype.mode",
+        "FontSmoothingGamma": "cleartype.gamma",
+        "FontSmoothingOrientation": "cleartype.orientation",
+        "FontSmoothingContrast": "cleartype.contrast",
+    }
+
+    CLEARTYPE_ITEM_TO_VALUE = {value: key for key, value in CLEARTYPE_VALUE_MAP.items()}
+
+    @property
+    def id(self) -> str:
+        return "installed_fonts"
+
+    @property
+    def name(self) -> str:
+        return "已安装字体与 ClearType"
+
+    @property
+    def category(self) -> str:
+        return "fonts"
+
+    @property
+    def description(self) -> str:
+        return "扫描字体安装清单、ClearType 状态及开源字体识别结果"
+
+    def supports_item(self, item: ScannedItem) -> bool:
+        return item.key.startswith("installed.") or item.key.startswith("cleartype.")
+
+    def scan(self) -> list[ScannedItem]:
+        items: list[ScannedItem] = []
+        items.extend(
+            self._scan_installed_fonts_from_registry(
+                self.MACHINE_FONTS_REGISTRY_PATH, scope="machine"
+            )
+        )
+        items.extend(
+            self._scan_installed_fonts_from_registry(
+                self.USER_FONTS_REGISTRY_PATH,
+                scope="user",
+            )
+        )
+        items.extend(self._scan_cleartype_settings())
+        return items
+
+    def apply(self, item: ScannedItem) -> bool:
+        if item.key.startswith("installed."):
+            # 纯观察型数据，不参与导入写回
+            return True
+
+        if not item.key.startswith("cleartype."):
+            return False
+
+        value_name = self.CLEARTYPE_ITEM_TO_VALUE.get(item.key)
+        if value_name is None:
+            return False
+
+        try:
+            value_to_write: object = item.current_value
+            if item.key == "cleartype.enabled":
+                value_to_write = 2 if bool(item.current_value) else 0
+
+            if isinstance(value_to_write, bool):
+                value_to_write = int(value_to_write)
+
+            if isinstance(value_to_write, int):
+                self._registry.set_value(
+                    self.CLEARTYPE_REGISTRY_PATH,
+                    value_name,
+                    value_to_write,
+                    value_type=REG_DWORD,
+                )
+            else:
+                self._registry.set_value(
+                    self.CLEARTYPE_REGISTRY_PATH,
+                    value_name,
+                    value_to_write,
+                )
+            return True
+        except Exception:
+            return False
+
+    def _scan_installed_fonts_from_registry(
+        self, registry_path: str, scope: str
+    ) -> list[ScannedItem]:
+        try:
+            values = self._registry.get_all_values(registry_path)
+        except Exception:
+            return []
+
+        items: list[ScannedItem] = []
+        for reg_name, reg_value in sorted(values.items()):
+            normalized_name = self._normalize_registry_font_name(reg_name)
+            resolved_path = self._resolve_font_path(str(reg_value))
+
+            associated_files: list[AssociatedFile] = []
+            current_value: object = str(reg_value)
+            metadata: dict[str, Any] = {
+                "scope": scope,
+                "registry_name": reg_name,
+                "registry_value": reg_value,
+                "readonly": True,
+            }
+
+            if resolved_path is not None and resolved_path.exists():
+                try:
+                    size = resolved_path.stat().st_size
+                except OSError:
+                    size = None
+
+                associated_files.append(
+                    AssociatedFile(
+                        type=AssetType.FONT,
+                        name=resolved_path.name,
+                        path=str(resolved_path),
+                        exists=True,
+                        size_bytes=size,
+                        sha256=None,
+                    )
+                )
+                current_value = str(resolved_path)
+
+                version = get_font_version(resolved_path)
+                if version:
+                    metadata["version"] = version
+
+            match = identify_opensource(normalized_name)
+            if match is not None:
+                metadata["is_opensource"] = True
+                metadata["opensource"] = dict(match)
+            else:
+                metadata["is_opensource"] = False
+
+            items.append(
+                ScannedItem(
+                    category=self.category,
+                    key=f"installed.{scope}.{reg_name}",
+                    current_value=current_value,
+                    default_value=None,
+                    change_type=ChangeType.MODIFIED,
+                    source_type=SourceType.REGISTRY,
+                    source_path=f"{registry_path}\\{reg_name}",
+                    associated_files=associated_files,
+                    metadata=metadata,
+                )
+            )
+
+        return items
+
+    def _scan_cleartype_settings(self) -> list[ScannedItem]:
+        try:
+            values = self._registry.get_all_values(self.CLEARTYPE_REGISTRY_PATH)
+        except Exception:
+            return []
+
+        items: list[ScannedItem] = []
+        for value_name, item_key in self.CLEARTYPE_VALUE_MAP.items():
+            if value_name not in values:
+                continue
+
+            raw_value = values[value_name]
+            current_value: object = raw_value
+            if item_key == "cleartype.enabled":
+                parsed = self._parse_int(raw_value)
+                current_value = (parsed or 0) > 0
+            else:
+                parsed = self._parse_int(raw_value)
+                if parsed is not None:
+                    current_value = parsed
+
+            items.append(
+                ScannedItem(
+                    category=self.category,
+                    key=item_key,
+                    current_value=current_value,
+                    default_value=None,
+                    change_type=ChangeType.MODIFIED,
+                    source_type=SourceType.REGISTRY,
+                    source_path=f"{self.CLEARTYPE_REGISTRY_PATH}\\{value_name}",
+                    metadata={"raw_value": raw_value},
+                )
+            )
+
+        return items
+
+    def _normalize_registry_font_name(self, value_name: str) -> str:
+        return str(value_name).split("(")[0].strip()
+
+    def _resolve_font_path(self, raw_value: str) -> Path | None:
+        candidate = Path(raw_value)
+        if candidate.is_absolute() and candidate.exists():
+            return candidate
+
+        system_fonts = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "Fonts" / raw_value
+        if system_fonts.exists():
+            return system_fonts
+
+        user_fonts = (
+            Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "Windows" / "Fonts" / raw_value
+        )
+        if user_fonts.exists():
+            return user_fonts
+
+        return None
+
+    def _parse_int(self, value: Any) -> int | None:
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, int):
+            return value
+        try:
+            return int(str(value).strip())
+        except ValueError:
+            return None

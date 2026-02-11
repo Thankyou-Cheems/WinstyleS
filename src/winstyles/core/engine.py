@@ -22,8 +22,16 @@ from winstyles.infra.restore import RestorePointManager
 from winstyles.infra.system import SystemAPI
 from winstyles.plugins.base import BaseScanner
 from winstyles.plugins.cursor import CursorScanner
-from winstyles.plugins.fonts import FontLinkScanner, FontSubstitutesScanner
-from winstyles.plugins.terminal import PowerShellProfileScanner, WindowsTerminalScanner
+from winstyles.plugins.fonts import (
+    FontLinkScanner,
+    FontSubstitutesScanner,
+    InstalledFontsScanner,
+)
+from winstyles.plugins.terminal import (
+    OhMyPoshScanner,
+    PowerShellProfileScanner,
+    WindowsTerminalScanner,
+)
 from winstyles.plugins.theme import ThemeScanner
 from winstyles.plugins.vscode import VSCodeScanner
 from winstyles.plugins.wallpaper import WallpaperScanner
@@ -53,9 +61,11 @@ class StyleEngine:
         # 字体扫描器
         self.register_scanner(FontSubstitutesScanner(registry, fs))
         self.register_scanner(FontLinkScanner(registry, fs))
+        self.register_scanner(InstalledFontsScanner(registry, fs))
         # 终端扫描器
         self.register_scanner(WindowsTerminalScanner(registry, fs))
         self.register_scanner(PowerShellProfileScanner(registry, fs))
+        self.register_scanner(OhMyPoshScanner(registry, fs))
         # 主题扫描器
         self.register_scanner(ThemeScanner(registry, fs))
         # 壁纸扫描器
@@ -364,7 +374,12 @@ class StyleEngine:
         skipped = 0
 
         for item in resolved_scan.items:
-            scanner = self._find_scanner_for_category(item.category)
+            readonly_flag = item.metadata.get("readonly")
+            if isinstance(readonly_flag, bool) and readonly_flag:
+                skipped += 1
+                continue
+
+            scanner = self._find_scanner_for_item(item)
             if scanner is None:
                 skipped += 1
                 continue
@@ -545,9 +560,11 @@ class StyleEngine:
             "items": diff_items,
         }
 
-    def _find_scanner_for_category(self, category: str) -> BaseScanner | None:
+    def _find_scanner_for_item(self, item: ScannedItem) -> BaseScanner | None:
         for scanner in self._scanners:
-            if scanner.category == category:
+            if scanner.category != item.category:
+                continue
+            if scanner.supports_item(item):
                 return scanner
         return None
 

@@ -36,6 +36,26 @@ winstyles import ./my-style.zip --skip-restore-point
 
 ---
 
+## 字体扫描输出约定（Phase B/B1）
+
+- `fonts` 类别新增 `installed.*` 项，用于记录 HKLM/HKCU 已安装字体清单。
+- `installed.*` 的 `metadata` 包含：
+  - `scope`（`machine`/`user`）
+  - `readonly`（导入时跳过写回）
+  - `is_opensource` 与 `opensource`（命中开源字体数据库时）
+- `fonts` 类别新增 `cleartype.*` 项，覆盖 `enabled/mode/gamma/orientation/contrast`。
+- 开源字体识别统一通过 `winstyles.utils.font_utils.identify_opensource()`。
+
+## 终端扫描输出约定（Phase B/B2）
+
+- `terminal` 类别新增 `ohMyPosh.installed`：
+  - `current_value` 为是否检测到 Oh My Posh 可执行文件
+  - `metadata.executable_path` 为命中路径（若有）
+- `terminal` 类别新增 `ohMyPosh.theme.*`：
+  - 从 PowerShell Profile 中解析 `oh-my-posh init ... --config ...`
+  - 若主题文件存在，会记录到 `associated_files`
+- `ohMyPosh.*` 项属于观察型数据，`metadata.readonly=true`，导入时跳过写回。
+
 ## 相关文档
 
 - [README.md](../README.md) - 项目概述

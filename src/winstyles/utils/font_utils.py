@@ -4,12 +4,25 @@
 提供字体文件查找和版本读取功能
 """
 
+import fnmatch
 import importlib
+import json
 import os
 import winreg
 from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
+
+
+class OpenSourceFontMatch(TypedDict):
+    name: str
+    patterns: list[str]
+    homepage: str
+    download: str
+    license: str
+    description: str
+
 
 TTFontLoader = Callable[[Path], Any]
 _TTFONT_LOADER: TTFontLoader | None = None
@@ -34,6 +47,88 @@ GENERIC_FONT_FAMILIES = {
     "math",
     "fangsong",
 }
+
+
+def _default_opensource_db_path() -> Path:
+    return Path(__file__).resolve().parents[3] / "data" / "opensource_fonts.json"
+
+
+@lru_cache(maxsize=4)
+def _load_opensource_font_entries(db_path: str) -> tuple[OpenSourceFontMatch, ...]:
+    path = Path(db_path)
+    if not path.exists():
+        return ()
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+
+    if not isinstance(payload, dict):
+        return ()
+
+    raw_fonts = payload.get("fonts", [])
+    if not isinstance(raw_fonts, list):
+        return ()
+
+    entries: list[OpenSourceFontMatch] = []
+    for raw in raw_fonts:
+        if not isinstance(raw, dict):
+            continue
+        name = str(raw.get("name", "")).strip()
+        if not name:
+            continue
+
+        raw_patterns = raw.get("patterns", [])
+        patterns: list[str] = []
+        if isinstance(raw_patterns, list):
+            for pattern in raw_patterns:
+                text = str(pattern).strip()
+                if text:
+                    patterns.append(text)
+
+        entries.append(
+            OpenSourceFontMatch(
+                name=name,
+                patterns=patterns,
+                homepage=str(raw.get("homepage", "")),
+                download=str(raw.get("download", "")),
+                license=str(raw.get("license", "")),
+                description=str(raw.get("description", "")),
+            )
+        )
+
+    return tuple(entries)
+
+
+def identify_opensource(font_name: str, db_path: Path | None = None) -> OpenSourceFontMatch | None:
+    """
+    根据字体名识别是否为开源字体。
+
+    Args:
+        font_name: 字体名称（如 "Maple Mono SC NF"）
+        db_path: 可选数据库路径，默认读取 data/opensource_fonts.json
+
+    Returns:
+        匹配到时返回字体信息，否则返回 None。
+    """
+    normalized = _normalize_font_name(font_name)
+    if not normalized:
+        return None
+
+    raw_name = str(font_name).strip().lower()
+    lookup_path = db_path if db_path is not None else _default_opensource_db_path()
+    for entry in _load_opensource_font_entries(str(lookup_path)):
+        patterns = entry.get("patterns", [])
+        for pattern in patterns:
+            normalized_pattern = _normalize_font_name(pattern)
+            pattern_lower = str(pattern).strip().lower()
+            if fnmatch.fnmatch(normalized, normalized_pattern) or fnmatch.fnmatch(
+                raw_name, pattern_lower
+            ):
+                return entry
+
+    return None
 
 
 def find_font_path(font_name: str) -> Path | None:
