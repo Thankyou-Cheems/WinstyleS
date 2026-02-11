@@ -29,6 +29,7 @@ winstyles export ./my-style.zip
 
 # 预览导入（不实际应用）
 winstyles import ./my-style.zip --dry-run
+# 输出摘要 + Dry-run Plan（逐项 action/target/risk/reason）
 
 # 导入并跳过还原点
 winstyles import ./my-style.zip --skip-restore-point
@@ -115,3 +116,4 @@ Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
   - 输入方式 A：`{ "path": "C:\\...\\my-style.zip", "dryRun": true, "skipRestore": true }`
   - 输入方式 B：`{ "fileName": "my-style.zip", "fileBase64": "<base64/data-url>", "dryRun": true, "skipRestore": true }`
   - 行为：当传入 `fileBase64` 时，后端会写入临时 zip 再执行导入；导入时会将包内 `assets` 重定位到 `~/.winstyles/imported_assets/<scan_id>` 再应用，避免跨设备路径失效
+  - dry-run 返回除计数外还包含 `dry_run_plan`（逐项预览）与 `risk_summary`

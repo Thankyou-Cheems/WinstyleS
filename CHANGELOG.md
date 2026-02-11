@@ -26,6 +26,7 @@
 - 修复测试环境可导入性：`tests/__init__.py` 自动注入 `src` 路径，仓库根目录可直接运行 `pytest`
 - 修复 `infra.registry` 在非 Windows 平台导入崩溃问题：为 `winreg` 增加兼容保护
 - 修复 Web 前端扫描结果复制按钮目标错误：改为复制 `scanResults` 内容
+- 增强导入 dry-run：输出逐项计划（action/target/risk/reason）与风险汇总，不再仅有计数
 
 ### Changed
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发

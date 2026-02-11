@@ -54,6 +54,7 @@ winstyles export ./my-style.zip --include-font-files
 
 # 预览导入（不实际应用）
 winstyles import ./my-style.zip --dry-run
+# dry-run 会输出逐项计划（action/target/risk），用于导入前审查
 
 # 导入配置包
 winstyles import ./my-style.zip

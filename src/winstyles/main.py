@@ -6,7 +6,7 @@ import importlib
 import json
 import os
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 import typer
 from rich.console import Console
@@ -231,6 +231,7 @@ def import_config(
     console.print(table)
 
     if dry_run:
+        _print_dry_run_plan(summary)
         console.print("[yellow]Dry-run: 未应用任何更改[/yellow]")
 
 
@@ -588,6 +589,50 @@ def _shorten_value(value: object, max_len: int = 80) -> str:
     if len(text) > max_len:
         return text[: max_len - 3] + "..."
     return text
+
+
+def _print_dry_run_plan(summary: dict[str, Any]) -> None:
+    plan = summary.get("dry_run_plan")
+    if not isinstance(plan, list) or not plan:
+        return
+
+    table = Table(title="Dry-run Plan")
+    table.add_column("#", style="cyan")
+    table.add_column("Risk", style="white")
+    table.add_column("Action", style="white")
+    table.add_column("Item", style="green")
+    table.add_column("Target", style="yellow")
+    table.add_column("Reason", style="magenta")
+
+    risk_styles = {"high": "red", "medium": "yellow", "low": "green"}
+    for idx, raw_entry in enumerate(plan, start=1):
+        if not isinstance(raw_entry, dict):
+            continue
+
+        risk = str(raw_entry.get("risk", "")).lower()
+        risk_text = f"[{risk_styles.get(risk, 'white')}]{risk.upper()}[/]"
+        item_text = f"{raw_entry.get('category', '')}.{raw_entry.get('key', '')}"
+        table.add_row(
+            str(idx),
+            risk_text,
+            str(raw_entry.get("action", "")),
+            item_text,
+            _shorten_value(raw_entry.get("target"), max_len=50),
+            str(raw_entry.get("reason", "")),
+        )
+
+    console.print(table)
+
+    risk_summary = summary.get("risk_summary")
+    if isinstance(risk_summary, dict):
+        summary_text = " / ".join(
+            [
+                f"HIGH={risk_summary.get('high', 0)}",
+                f"MEDIUM={risk_summary.get('medium', 0)}",
+                f"LOW={risk_summary.get('low', 0)}",
+            ]
+        )
+        console.print(f"[bold]Risk Summary:[/bold] {summary_text}")
 
 
 def _print_yaml(payload: dict[str, object]) -> None:

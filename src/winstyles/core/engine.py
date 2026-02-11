@@ -319,7 +319,7 @@ class StyleEngine:
         package_path: Path,
         dry_run: bool = False,
         create_restore_point: bool = True,
-    ) -> dict[str, int]:
+    ) -> dict[str, Any]:
         """
         导入配置包
 
@@ -439,7 +439,7 @@ class StyleEngine:
         package_dir: Path,
         dry_run: bool,
         create_restore_point: bool,
-    ) -> dict[str, int]:
+    ) -> dict[str, Any]:
         scan_path = package_dir / "scan.json"
         if not scan_path.exists():
             return {"total": 0, "applied": 0, "failed": 0, "skipped": 0}
@@ -449,11 +449,18 @@ class StyleEngine:
         resolved_scan = self._resolve_import_assets(scan_result, package_dir)
 
         if dry_run:
+            plan = self._build_dry_run_plan(resolved_scan.items)
+            would_apply = sum(1 for item in plan if item["action"] == "apply")
+            would_skip = len(plan) - would_apply
             return {
                 "total": len(resolved_scan.items),
                 "applied": 0,
                 "failed": 0,
                 "skipped": len(resolved_scan.items),
+                "would_apply": would_apply,
+                "would_skip": would_skip,
+                "dry_run_plan": plan,
+                "risk_summary": self._summarize_risk(plan),
             }
 
         if create_restore_point:
@@ -488,6 +495,75 @@ class StyleEngine:
             "failed": failed,
             "skipped": skipped,
         }
+
+    def _build_dry_run_plan(self, items: list[ScannedItem]) -> list[dict[str, Any]]:
+        plan: list[dict[str, Any]] = []
+        for item in items:
+            readonly_flag = item.metadata.get("readonly")
+            is_readonly = isinstance(readonly_flag, bool) and readonly_flag
+            scanner = self._find_scanner_for_item(item)
+
+            action = "apply"
+            reason = "可由对应扫描器写回"
+            if is_readonly:
+                action = "skip"
+                reason = "只读项，导入时不会写回"
+            elif scanner is None:
+                action = "skip"
+                reason = "未找到可处理该项的扫描器"
+
+            risk, risk_reason = self._assess_import_risk(item, action)
+            plan.append(
+                {
+                    "category": item.category,
+                    "key": item.key,
+                    "action": action,
+                    "operation": self._infer_import_operation(item, action),
+                    "target": item.source_path,
+                    "risk": risk,
+                    "reason": reason,
+                    "risk_reason": risk_reason,
+                }
+            )
+        return plan
+
+    def _summarize_risk(self, plan: list[dict[str, Any]]) -> dict[str, int]:
+        summary = {"low": 0, "medium": 0, "high": 0}
+        for entry in plan:
+            risk = str(entry.get("risk", "")).lower()
+            if risk in summary:
+                summary[risk] += 1
+        return summary
+
+    def _infer_import_operation(self, item: ScannedItem, action: str) -> str:
+        if action == "skip":
+            return "skip"
+        if item.source_type.value == "registry":
+            return "set_registry_value"
+        if item.source_type.value == "file":
+            return "write_file"
+        if item.source_type.value == "system_api":
+            return "invoke_system_api"
+        return "apply"
+
+    def _assess_import_risk(self, item: ScannedItem, action: str) -> tuple[str, str]:
+        if action == "skip":
+            return "low", "dry-run 仅预览，不会执行写入"
+
+        if item.source_type.value == "registry":
+            if item.category in {"fonts", "theme", "cursor", "wallpaper"}:
+                return "high", "涉及系统外观相关注册表写入"
+            return "medium", "涉及注册表写入"
+
+        if item.source_type.value == "file":
+            if item.associated_files:
+                return "medium", "涉及配置文件与关联资源调整"
+            return "low", "仅涉及配置文件写入"
+
+        if item.source_type.value == "system_api":
+            return "high", "涉及系统 API 调用"
+
+        return "medium", "未知来源类型，建议谨慎执行"
 
     def _resolve_import_assets(self, scan_result: ScanResult, package_dir: Path) -> ScanResult:
         assets_root = package_dir / "assets"
