@@ -56,6 +56,32 @@ winstyles import ./my-style.zip --skip-restore-point
   - 若主题文件存在，会记录到 `associated_files`
 - `ohMyPosh.*` 项属于观察型数据，`metadata.readonly=true`，导入时跳过写回。
 
+## 壁纸扫描输出约定（Phase B/B3）
+
+- `wallpaper.path/style/tile/transcoded` 归类为 `surface=desktop`。
+- 锁屏相关新增 `wallpaper.lockscreen.*`：
+  - `path`（策略项 LockScreenImage）
+  - `spotlightEnabled`、`spotlightOverlayEnabled`
+  - `spotlightAssetCount`（基础可用资产数量）
+- 锁屏与 Spotlight 观测项标记为 `metadata.readonly=true`，导入时跳过写回。
+
+## 主题扫描输出约定（Phase B/B4）
+
+- 主题新增 DWM 字段：
+  - `theme.dwm.colorizationColor`
+  - `theme.dwm.colorizationAfterglow`
+  - `theme.dwm.colorizationColorBalance`
+  - `theme.dwm.colorizationAfterglowBalance`
+  - `theme.dwm.colorizationBlurBalance`
+  - `theme.dwm.accentColorInactive`
+- 颜色类值会同时保留 `metadata.raw_value`，写回时优先使用原始 DWORD。
+
+## 鼠标扫描输出约定（Phase B/B5）
+
+- 新增 `cursor.size`（读取 `CursorBaseSize/CursorSize`）。
+- `cursor.*` 路径统一归一化为可解析路径，原始注册表值保存在 `metadata.raw_value`。
+- 导出导入流程使用归一化路径，便于跨设备资产重定位。
+
 ## 相关文档
 
 - [README.md](../README.md) - 项目概述

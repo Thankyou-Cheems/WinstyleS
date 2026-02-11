@@ -137,7 +137,98 @@ class StyleEngine:
                 if terminal_defaults:
                     defaults["terminal"] = terminal_defaults
 
+        theme = raw.get("theme", {})
+        appearance = raw.get("appearance", {})
+        theme_defaults: dict[str, Any] = {}
+        if isinstance(theme, dict):
+            theme_map = {
+                "appsUseLightTheme": "theme.appsUseLightTheme",
+                "systemUsesLightTheme": "theme.systemUsesLightTheme",
+                "enableTransparency": "theme.enableTransparency",
+                "colorPrevalence": "theme.colorPrevalence",
+                "accentColor": "theme.accentColor",
+            }
+            for src_key, dest_key in theme_map.items():
+                if src_key in theme:
+                    theme_defaults[dest_key] = theme[src_key]
+        if isinstance(appearance, dict):
+            appearance_map = {
+                "colorization_color": "theme.dwm.colorizationColor",
+                "colorization_color_balance": "theme.dwm.colorizationColorBalance",
+                "colorization_afterglow": "theme.dwm.colorizationAfterglow",
+                "colorization_afterglow_balance": "theme.dwm.colorizationAfterglowBalance",
+                "colorization_blur_balance": "theme.dwm.colorizationBlurBalance",
+                "accent_color_inactive": "theme.dwm.accentColorInactive",
+            }
+            color_keys = {
+                "colorization_color",
+                "colorization_afterglow",
+                "accent_color_inactive",
+            }
+            for src_key, dest_key in appearance_map.items():
+                if src_key in appearance:
+                    value = appearance[src_key]
+                    if src_key in color_keys:
+                        value = self._normalize_dwm_color_default(value)
+                    theme_defaults[dest_key] = value
+        if theme_defaults:
+            defaults["theme"] = theme_defaults
+
+        wallpaper = raw.get("wallpaper", {})
+        if isinstance(wallpaper, dict):
+            wallpaper_defaults: dict[str, Any] = {}
+            if "style" in wallpaper:
+                wallpaper_defaults["wallpaper.style"] = wallpaper["style"]
+            if "tile" in wallpaper:
+                wallpaper_defaults["wallpaper.tile"] = wallpaper["tile"]
+            if wallpaper_defaults:
+                defaults["wallpaper"] = wallpaper_defaults
+
+        cursor = raw.get("cursor", {})
+        if isinstance(cursor, dict):
+            cursor_defaults: dict[str, Any] = {}
+            if "scheme" in cursor:
+                cursor_defaults["cursor.scheme"] = cursor["scheme"]
+
+            cursors = cursor.get("cursors", {})
+            if isinstance(cursors, dict):
+                for key, value in cursors.items():
+                    cursor_defaults[f"cursor.{str(key).lower()}"] = (
+                        self._normalize_default_cursor_path(value)
+                    )
+            if cursor_defaults:
+                defaults["cursor"] = cursor_defaults
+
         return defaults
+
+    def _normalize_default_cursor_path(self, raw_value: Any) -> Any:
+        if not isinstance(raw_value, str):
+            return raw_value
+        value = raw_value.strip()
+        if not value:
+            return value
+        expanded = os.path.expandvars(value)
+        return str(Path(expanded))
+
+    def _normalize_dwm_color_default(self, raw_value: Any) -> Any:
+        if isinstance(raw_value, int):
+            return self._abgr_to_hex(raw_value)
+        if isinstance(raw_value, str):
+            text = raw_value.strip()
+            if text.startswith("0x"):
+                try:
+                    return self._abgr_to_hex(int(text, 16))
+                except ValueError:
+                    return raw_value
+            if text.startswith("#"):
+                return text.upper()
+        return raw_value
+
+    def _abgr_to_hex(self, value: int) -> str:
+        r = value & 0xFF
+        g = (value >> 8) & 0xFF
+        b = (value >> 16) & 0xFF
+        return f"#{r:02X}{g:02X}{b:02X}"
 
     def register_scanner(self, scanner: BaseScanner) -> None:
         """注册一个扫描器"""

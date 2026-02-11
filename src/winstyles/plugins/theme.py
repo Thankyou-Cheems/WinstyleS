@@ -22,6 +22,7 @@ class ThemeScanner(BaseScanner):
 
     PERSONALIZE_PATH = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     ACCENT_PATH = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Accent"
+    DWM_PATH = r"SOFTWARE\Microsoft\Windows\DWM"
 
     @property
     def id(self) -> str:
@@ -38,6 +39,12 @@ class ThemeScanner(BaseScanner):
     @property
     def description(self) -> str:
         return "扫描系统主题设置（深色/浅色模式、强调色、透明效果）"
+
+    def _abgr_to_hex(self, value: int) -> str:
+        r = value & 0xFF
+        g = (value >> 8) & 0xFF
+        b = (value >> 16) & 0xFF
+        return f"#{r:02X}{g:02X}{b:02X}"
 
     def scan(self) -> list[ScannedItem]:
         """扫描主题设置"""
@@ -114,6 +121,41 @@ class ThemeScanner(BaseScanner):
         except (FileNotFoundError, OSError):
             pass
 
+        # 扫描 DWM 颜色字段
+        dwm_key = f"HKCU\\{self.DWM_PATH}"
+        dwm_items = [
+            ("ColorizationColor", "theme.dwm.colorizationColor", True),
+            ("ColorizationAfterglow", "theme.dwm.colorizationAfterglow", True),
+            ("ColorizationColorBalance", "theme.dwm.colorizationColorBalance", False),
+            ("ColorizationAfterglowBalance", "theme.dwm.colorizationAfterglowBalance", False),
+            ("ColorizationBlurBalance", "theme.dwm.colorizationBlurBalance", False),
+            ("AccentColorInactive", "theme.dwm.accentColorInactive", True),
+        ]
+        for value_name, key_name, is_color in dwm_items:
+            try:
+                value, _ = self._registry.get_value(dwm_key, value_name)
+            except (FileNotFoundError, OSError):
+                continue
+
+            normalized_value = value
+            metadata: dict[str, object] = {}
+            if is_color and isinstance(value, int):
+                normalized_value = self._abgr_to_hex(value)
+                metadata["raw_value"] = value
+
+            items.append(
+                ScannedItem(
+                    category=self.category,
+                    key=key_name,
+                    current_value=normalized_value,
+                    default_value=None,
+                    change_type=ChangeType.MODIFIED,
+                    source_type=SourceType.REGISTRY,
+                    source_path=f"{dwm_key}\\{value_name}",
+                    metadata=metadata,
+                )
+            )
+
         return items
 
     def apply(self, item: ScannedItem) -> bool:
@@ -125,7 +167,7 @@ class ThemeScanner(BaseScanner):
             value = item.current_value
 
             # 处理强调色
-            if item.key == "theme.accentColor" and item.metadata.get("raw_value"):
+            if item.metadata.get("raw_value") is not None:
                 value = item.metadata["raw_value"]
             elif item.key == "theme.accentPalette" and isinstance(value, str):
                 value = bytes.fromhex(value)
@@ -143,4 +185,7 @@ class ThemeScanner(BaseScanner):
             "theme.enableTransparency": 1,
             "theme.colorPrevalence": 0,
             "theme.accentColor": "#0078D4",  # Windows 默认蓝色
+            "theme.dwm.colorizationColorBalance": 89,
+            "theme.dwm.colorizationAfterglowBalance": 0,
+            "theme.dwm.colorizationBlurBalance": 0,
         }
