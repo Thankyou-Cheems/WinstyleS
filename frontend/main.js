@@ -101,6 +101,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function formatApiError(err) {
+    const code = err?.code ? `[${err.code}] ` : "";
+    return `${code}${err?.message || err}`;
+  }
+
+  function makeApiError(code, message, data = null) {
+    const err = new Error(message || "请求失败");
+    err.code = code || "request_failed";
+    err.data = data;
+    return err;
+  }
+
+  async function parseJsonResponse(response) {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
   function getSelectedCategories(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return [];
@@ -133,10 +155,36 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         body: JSON.stringify(payload),
       });
+      const body = await parseJsonResponse(response);
+
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
+        if (body && typeof body === "object") {
+          throw makeApiError(
+            body.code || "http_error",
+            body.message || body.error || `HTTP Error: ${response.status}`,
+            body.data || null
+          );
+        }
+        throw makeApiError("http_error", `HTTP Error: ${response.status}`);
       }
-      return await response.json();
+
+      if (
+        body &&
+        typeof body === "object" &&
+        Object.prototype.hasOwnProperty.call(body, "ok") &&
+        Object.prototype.hasOwnProperty.call(body, "data")
+      ) {
+        if (!body.ok) {
+          throw makeApiError(
+            body.code || "api_error",
+            body.message || body.error || "请求失败",
+            body.data || null
+          );
+        }
+        return body.data;
+      }
+
+      return body;
     } catch (err) {
       console.error("Web invoke failed:", err);
       throw err;
@@ -147,11 +195,20 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       return await invokeWeb(command, payload);
     } catch (err) {
-      if (outputId) outputTo(outputId, `Web Interface Error: ${err}`);
-      setStatus("Request Failed", true);
+      const message = formatApiError(err);
+      if (outputId) outputTo(outputId, `Web Interface Error: ${message}`);
+      setStatus(message, true);
       return null;
     }
   }
+
+  invokeWeb("status", {})
+    .then((status) => {
+      setStatus(`Web Mode (${status?.mode || "local"})`);
+    })
+    .catch((err) => {
+      setStatus(`状态检查失败: ${formatApiError(err)}`, true);
+    });
 
   // ============================================
   // Chip Selection State

@@ -54,7 +54,12 @@ def _scan_json(items: list[ScannedItem], scan_id: str = "202602100001") -> str:
     return json.dumps(scan.model_dump(mode="json"), ensure_ascii=False, indent=2)
 
 
-def test_import_routes_items_to_scanner_by_supports_item(tmp_path: Path) -> None:
+def test_import_routes_items_to_scanner_by_supports_item(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+
     package_dir = tmp_path / "pkg"
     package_dir.mkdir(parents=True, exist_ok=True)
 
@@ -92,7 +97,9 @@ def test_import_routes_items_to_scanner_by_supports_item(tmp_path: Path) -> None
     assert ps_scanner.applied == ["powershell.profile.PowerShell"]
 
 
-def test_import_skips_readonly_items(tmp_path: Path) -> None:
+def test_import_skips_readonly_items(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+
     package_dir = tmp_path / "pkg"
     package_dir.mkdir(parents=True, exist_ok=True)
 
@@ -130,6 +137,91 @@ def test_import_skips_readonly_items(tmp_path: Path) -> None:
     assert summary["skipped"] == 1
     assert summary["failed"] == 0
     assert font_scanner.applied == ["cleartype.enabled"]
+
+
+def test_import_aborts_admin_required_items_without_admin_on_windows(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    package_dir = tmp_path / "pkg"
+    package_dir.mkdir(parents=True, exist_ok=True)
+
+    item = ScannedItem(
+        category="fonts",
+        key="fontSubstitutes.Segoe UI",
+        current_value="Maple Mono",
+        default_value=None,
+        change_type=ChangeType.MODIFIED,
+        source_type=SourceType.REGISTRY,
+        source_path="HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontSubstitutes",
+    )
+    _write_scan_package(package_dir, [item])
+
+    scanner = _DummyScanner("fonts", "fontSubstitutes.")
+    engine = StyleEngine()
+    engine._scanners = [scanner]
+
+    monkeypatch.setattr("winstyles.core.engine.platform.system", lambda: "Windows")
+    monkeypatch.setattr("winstyles.core.engine.SystemAPI.is_admin", lambda: False)
+
+    summary = engine.import_package(package_dir, dry_run=False, create_restore_point=False)
+
+    assert summary["aborted"] is True
+    assert summary["error_code"] == "admin_required"
+    assert summary["applied"] == 0
+    assert summary["skipped"] == 1
+    assert scanner.applied == []
+    assert Path(summary["import_log_path"]).exists()
+
+
+def test_import_writes_pre_import_backup_and_import_log(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", lambda: home)
+
+    package_dir = tmp_path / "pkg"
+    package_dir.mkdir(parents=True, exist_ok=True)
+
+    item = ScannedItem(
+        category="terminal",
+        key="windowsTerminal.theme",
+        current_value="One Half Dark",
+        default_value=None,
+        change_type=ChangeType.MODIFIED,
+        source_type=SourceType.FILE,
+        source_path="settings.json",
+    )
+    _write_scan_package(package_dir, [item])
+
+    scanner = _DummyScanner("terminal", "windowsTerminal.")
+    engine = StyleEngine()
+    engine._scanners = [scanner]
+
+    summary = engine.import_package(package_dir, dry_run=False, create_restore_point=False)
+
+    backup_path = Path(summary["pre_import_backup_path"])
+    log_path = Path(summary["import_log_path"])
+    assert summary["applied"] == 1
+    assert backup_path.exists()
+    assert log_path.exists()
+
+    with zipfile.ZipFile(backup_path, "r") as zip_ref:
+        assert "scan.json" in zip_ref.namelist()
+
+    log = json.loads(log_path.read_text(encoding="utf-8"))
+    assert log["result"]["pre_import_backup_path"] == str(backup_path)
+    assert {step["name"] for step in log["steps"]} >= {
+        "load_scan",
+        "admin_check",
+        "restore_point",
+        "pre_import_backup",
+        "resolve_assets",
+        "apply_items",
+    }
+    assert log["items"][0]["key"] == "windowsTerminal.theme"
+    assert log["items"][0]["status"] == "applied"
 
 
 def test_import_dry_run_returns_itemized_plan_and_risk(tmp_path: Path) -> None:

@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from start_web_ui import ApiHandler, _resolve_src_dir
+import pytest
+
+from start_web_ui import ApiError, ApiHandler, _resolve_src_dir
 from winstyles.domain.models import ScannedItem, ScanResult
 from winstyles.domain.types import ChangeType, SourceType
 
@@ -89,3 +91,61 @@ def test_filter_scan_result_keeps_only_modified_items() -> None:
     assert len(filtered.items) == 1
     assert filtered.items[0].key == "b"
     assert filtered.summary == {"terminal": 1}
+
+
+def test_status_payload_has_ok_status_and_mode() -> None:
+    handler = ApiHandler.__new__(ApiHandler)
+
+    status = handler.dispatch_command("status", {})
+
+    assert status["status"] == "ok"
+    assert status["mode"] in {"development", "frozen"}
+    assert "frontend_dir" in status
+    assert "src_dir" in status
+
+
+def test_unknown_command_raises_structured_api_error() -> None:
+    handler = ApiHandler.__new__(ApiHandler)
+
+    with pytest.raises(ApiError) as exc_info:
+        handler.dispatch_command("missing_command", {})
+
+    assert exc_info.value.code == "unknown_command"
+    assert exc_info.value.status_code == 404
+
+
+def test_api_error_payload_shape() -> None:
+    handler = ApiHandler.__new__(ApiHandler)
+
+    payload = handler._api_error("bad_request", "Bad request", data={"field": "path"})
+
+    assert payload == {
+        "ok": False,
+        "data": {"field": "path"},
+        "error": "Bad request",
+        "code": "bad_request",
+        "message": "Bad request",
+    }
+
+
+def test_run_subprocess_failure_raises_structured_api_error(monkeypatch) -> None:
+    handler = ApiHandler.__new__(ApiHandler)
+
+    class _Result:
+        returncode = 2
+        stdout = "stdout details"
+        stderr = "stderr details"
+
+    monkeypatch.setattr("start_web_ui.subprocess.run", lambda *args, **kwargs: _Result())
+
+    with pytest.raises(ApiError) as exc_info:
+        handler.run_subprocess(["python", "-m", "winstyles", "scan"])
+
+    assert exc_info.value.code == "command_failed"
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.message == "stderr details"
+    assert exc_info.value.data == {
+        "returncode": 2,
+        "stdout": "stdout details",
+        "stderr": "stderr details",
+    }

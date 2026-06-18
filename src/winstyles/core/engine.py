@@ -10,6 +10,7 @@ import platform
 import shutil
 import tempfile
 import zipfile
+from datetime import UTC, datetime
 from importlib import resources
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
@@ -345,64 +346,106 @@ class StyleEngine:
             create_restore_point: 是否创建系统还原点
         """
         package_path = Path(package_path)
+        audit = self._start_import_audit(package_path, dry_run, create_restore_point)
         if package_path.suffix.lower() == ".zip":
-            return self._import_from_zip(
+            summary = self._import_from_zip(
                 package_path,
                 dry_run=dry_run,
                 create_restore_point=create_restore_point,
+                audit=audit,
+            )
+        else:
+            summary = self._import_from_dir(
+                package_path,
+                dry_run=dry_run,
+                create_restore_point=create_restore_point,
+                audit=audit,
             )
 
-        return self._import_from_dir(
-            package_path,
-            dry_run=dry_run,
-            create_restore_point=create_restore_point,
-        )
+        if dry_run:
+            return summary
+        return self._finalize_import_audit(audit, summary)
 
     def _import_from_zip(
         self,
         package_path: Path,
         dry_run: bool,
         create_restore_point: bool,
+        audit: dict[str, Any],
     ) -> dict[str, Any]:
-        scan_result: ScanResult | None = None
-        if dry_run or create_restore_point:
-            try:
-                scan_result = self._load_scan_result_from_zip(package_path)
-            except zipfile.BadZipFile:
-                return self._import_error_summary("invalid_zip", "Invalid zip package")
-            except PackageError as exc:
-                return self._import_error_summary("unsafe_zip", str(exc))
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
-                return self._import_error_summary("scan_json_invalid", "Invalid scan.json")
+        try:
+            scan_result = self._load_scan_result_from_zip(package_path)
+        except zipfile.BadZipFile:
+            self._record_import_step(audit, "load_scan", "failed", error_code="invalid_zip")
+            return self._import_error_summary("invalid_zip", "Invalid zip package")
+        except PackageError as exc:
+            self._record_import_step(
+                audit,
+                "load_scan",
+                "failed",
+                message=str(exc),
+                error_code="unsafe_zip",
+            )
+            return self._import_error_summary("unsafe_zip", str(exc))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            self._record_import_step(
+                audit,
+                "load_scan",
+                "failed",
+                error_code="scan_json_invalid",
+            )
+            return self._import_error_summary("scan_json_invalid", "Invalid scan.json")
 
-            if scan_result is None:
-                return self._import_error_summary("scan_json_missing", "scan.json not found")
+        if scan_result is None:
+            self._record_import_step(audit, "load_scan", "failed", error_code="scan_json_missing")
+            return self._import_error_summary("scan_json_missing", "scan.json not found")
+
+        audit["scan_id"] = scan_result.scan_id
+        self._record_import_step(
+            audit,
+            "load_scan",
+            "ok",
+            message=f"Loaded {len(scan_result.items)} items from zip package",
+        )
 
         if dry_run:
-            assert scan_result is not None
             return self._build_import_dry_run_summary(scan_result)
 
-        if create_restore_point:
-            assert scan_result is not None
-            restore_error = self._create_restore_point_or_error(len(scan_result.items))
-            if restore_error is not None:
-                return restore_error
+        prepare_error, backup_path = self._prepare_import_apply(
+            scan_result,
+            create_restore_point=create_restore_point,
+            audit=audit,
+        )
+        if prepare_error is not None:
+            return prepare_error
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_dir = Path(tmp_dir)
             try:
                 self._extract_zip_safely(package_path, output_dir)
             except zipfile.BadZipFile:
+                self._record_import_step(audit, "extract_zip", "failed", error_code="invalid_zip")
                 return self._import_error_summary("invalid_zip", "Invalid zip package")
             except PackageError as exc:
+                self._record_import_step(
+                    audit,
+                    "extract_zip",
+                    "failed",
+                    message=str(exc),
+                    error_code="unsafe_zip",
+                )
                 return self._import_error_summary("unsafe_zip", str(exc))
             except OSError as exc:
+                self._record_import_step(
+                    audit,
+                    "extract_zip",
+                    "failed",
+                    message=str(exc),
+                    error_code="zip_extract_failed",
+                )
                 return self._import_error_summary("zip_extract_failed", str(exc))
-            return self._import_from_dir(
-                output_dir,
-                dry_run=False,
-                create_restore_point=False,
-            )
+            self._record_import_step(audit, "extract_zip", "ok")
+            return self._apply_imported_scan(scan_result, output_dir, audit, backup_path)
 
     def _write_package(
         self,
@@ -550,26 +593,117 @@ class StyleEngine:
         package_dir: Path,
         dry_run: bool,
         create_restore_point: bool,
+        audit: dict[str, Any],
     ) -> dict[str, Any]:
         scan_path = package_dir / "scan.json"
         if not scan_path.exists():
+            self._record_import_step(audit, "load_scan", "failed", error_code="scan_json_missing")
             return self._import_error_summary("scan_json_missing", "scan.json not found")
 
         try:
             scan_data = json.loads(scan_path.read_text(encoding="utf-8"))
             scan_result = ScanResult.model_validate(scan_data)
         except (OSError, json.JSONDecodeError, ValueError):
+            self._record_import_step(audit, "load_scan", "failed", error_code="scan_json_invalid")
             return self._import_error_summary("scan_json_invalid", "Invalid scan.json")
+
+        audit["scan_id"] = scan_result.scan_id
+        self._record_import_step(
+            audit,
+            "load_scan",
+            "ok",
+            message=f"Loaded {len(scan_result.items)} items from directory package",
+        )
 
         if dry_run:
             return self._build_import_dry_run_summary(scan_result)
 
+        prepare_error, backup_path = self._prepare_import_apply(
+            scan_result,
+            create_restore_point=create_restore_point,
+            audit=audit,
+        )
+        if prepare_error is not None:
+            return prepare_error
+
+        return self._apply_imported_scan(scan_result, package_dir, audit, backup_path)
+
+    def _prepare_import_apply(
+        self,
+        scan_result: ScanResult,
+        create_restore_point: bool,
+        audit: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, Path | None]:
+        admin_error = self._admin_check_or_error(scan_result)
+        if admin_error is not None:
+            self._record_import_step(
+                audit,
+                "admin_check",
+                "failed",
+                message=str(admin_error["error"]),
+                error_code=str(admin_error["error_code"]),
+            )
+            return admin_error, None
+        self._record_import_step(audit, "admin_check", "ok")
+
         if create_restore_point:
             restore_error = self._create_restore_point_or_error(len(scan_result.items))
             if restore_error is not None:
-                return restore_error
+                self._record_import_step(
+                    audit,
+                    "restore_point",
+                    "failed",
+                    message=str(restore_error["error"]),
+                    error_code=str(restore_error["error_code"]),
+                )
+                return restore_error, None
+            self._record_import_step(audit, "restore_point", "ok")
+        else:
+            self._record_import_step(
+                audit,
+                "restore_point",
+                "skipped",
+                message="Restore point creation was skipped by request",
+            )
 
+        try:
+            backup_path = self._create_pre_import_backup(scan_result)
+        except Exception as exc:
+            self._record_import_step(
+                audit,
+                "pre_import_backup",
+                "failed",
+                message=str(exc),
+                error_code="pre_import_backup_failed",
+            )
+            return (
+                self._import_error_summary(
+                    "pre_import_backup_failed",
+                    "Failed to create pre-import backup package.",
+                    total=len(scan_result.items),
+                    skipped=len(scan_result.items),
+                ),
+                None,
+            )
+
+        self._record_import_step(
+            audit,
+            "pre_import_backup",
+            "ok",
+            path=str(backup_path),
+        )
+        return None, backup_path
+
+    def _apply_imported_scan(
+        self,
+        scan_result: ScanResult,
+        package_dir: Path,
+        audit: dict[str, Any],
+        backup_path: Path | None,
+    ) -> dict[str, Any]:
+        self._record_import_step(audit, "resolve_assets", "started")
         resolved_scan = self._resolve_import_assets(scan_result, package_dir)
+        self._record_import_step(audit, "resolve_assets", "ok")
 
         applied = 0
         failed = 0
@@ -579,31 +713,75 @@ class StyleEngine:
             readonly_flag = item.metadata.get("readonly")
             if isinstance(readonly_flag, bool) and readonly_flag:
                 skipped += 1
+                self._record_import_item(
+                    audit,
+                    item,
+                    status="skipped",
+                    reason="readonly",
+                )
                 continue
 
             scanner = self._find_scanner_for_item(item)
             if scanner is None:
                 skipped += 1
+                self._record_import_item(
+                    audit,
+                    item,
+                    status="skipped",
+                    reason="unsupported",
+                )
                 continue
             try:
                 if scanner.apply(item):
                     applied += 1
+                    self._record_import_item(
+                        audit,
+                        item,
+                        status="applied",
+                        scanner=scanner.id,
+                    )
                 else:
                     failed += 1
-            except Exception:
+                    self._record_import_item(
+                        audit,
+                        item,
+                        status="failed",
+                        scanner=scanner.id,
+                        reason="scanner_returned_false",
+                    )
+            except Exception as exc:
                 failed += 1
+                self._record_import_item(
+                    audit,
+                    item,
+                    status="failed",
+                    scanner=scanner.id,
+                    reason=str(exc),
+                )
 
-        return {
+        apply_status = "ok" if failed == 0 else "partial_failed"
+        self._record_import_step(
+            audit,
+            "apply_items",
+            apply_status,
+            message=f"Applied={applied}, failed={failed}, skipped={skipped}",
+        )
+
+        summary: dict[str, Any] = {
             "total": len(resolved_scan.items),
             "applied": applied,
             "failed": failed,
             "skipped": skipped,
         }
+        if backup_path is not None:
+            summary["pre_import_backup_path"] = str(backup_path)
+        return summary
 
     def _build_import_dry_run_summary(self, scan_result: ScanResult) -> dict[str, Any]:
         plan = self._build_dry_run_plan(scan_result.items)
         would_apply = sum(1 for item in plan if item["action"] == "apply")
         would_skip = len(plan) - would_apply
+        admin_required = any(bool(item.get("requires_admin")) for item in plan)
         return {
             "total": len(scan_result.items),
             "applied": 0,
@@ -611,9 +789,166 @@ class StyleEngine:
             "skipped": len(scan_result.items),
             "would_apply": would_apply,
             "would_skip": would_skip,
+            "admin_required": admin_required,
             "dry_run_plan": plan,
             "risk_summary": self._summarize_risk(plan),
         }
+
+    def _start_import_audit(
+        self,
+        package_path: Path,
+        dry_run: bool,
+        create_restore_point: bool,
+    ) -> dict[str, Any]:
+        return {
+            "schema_version": "1.0",
+            "package_path": str(package_path),
+            "dry_run": dry_run,
+            "create_restore_point": create_restore_point,
+            "started_at": self._utc_now_iso(),
+            "scan_id": None,
+            "steps": [],
+            "items": [],
+        }
+
+    def _record_import_step(
+        self,
+        audit: dict[str, Any],
+        name: str,
+        status: str,
+        message: str | None = None,
+        error_code: str | None = None,
+        path: str | None = None,
+    ) -> None:
+        entry: dict[str, Any] = {
+            "name": name,
+            "status": status,
+            "timestamp": self._utc_now_iso(),
+        }
+        if message is not None:
+            entry["message"] = message
+        if error_code is not None:
+            entry["error_code"] = error_code
+        if path is not None:
+            entry["path"] = path
+        steps = audit.setdefault("steps", [])
+        if isinstance(steps, list):
+            steps.append(entry)
+
+    def _record_import_item(
+        self,
+        audit: dict[str, Any],
+        item: ScannedItem,
+        status: str,
+        reason: str | None = None,
+        scanner: str | None = None,
+    ) -> None:
+        entry: dict[str, Any] = {
+            "category": item.category,
+            "key": item.key,
+            "source_type": item.source_type.value,
+            "target": item.source_path,
+            "status": status,
+            "timestamp": self._utc_now_iso(),
+        }
+        if reason is not None:
+            entry["reason"] = reason
+        if scanner is not None:
+            entry["scanner"] = scanner
+        items = audit.setdefault("items", [])
+        if isinstance(items, list):
+            items.append(entry)
+
+    def _finalize_import_audit(
+        self,
+        audit: dict[str, Any],
+        summary: dict[str, Any],
+    ) -> dict[str, Any]:
+        audit["finished_at"] = self._utc_now_iso()
+        result = dict(summary)
+        log_path = self._build_import_log_path(audit)
+        result["import_log_path"] = str(log_path)
+        audit["result"] = result
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.write_text(
+                json.dumps(audit, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            result.pop("import_log_path", None)
+            result["import_log_error"] = str(exc)
+        return result
+
+    def _build_import_log_path(self, audit: dict[str, Any]) -> Path:
+        started_at = str(audit.get("started_at") or self._utc_now_iso())
+        timestamp = self._safe_filename_component(started_at.replace("+00:00", "Z"))
+        scan_id = self._safe_filename_component(str(audit.get("scan_id") or "unknown"))
+        return (
+            Path.home()
+            / ".winstyles"
+            / "import_logs"
+            / f"{timestamp}_{scan_id}"
+            / "import_log.json"
+        )
+
+    def _create_pre_import_backup(self, import_scan_result: ScanResult) -> Path:
+        timestamp = self._safe_filename_component(self._utc_now_iso().replace("+00:00", "Z"))
+        scan_id = self._safe_filename_component(import_scan_result.scan_id)
+        backup_dir = Path.home() / ".winstyles" / "backups"
+        backup_path = backup_dir / f"pre_import_{timestamp}_{scan_id}.zip"
+        current_scan = self.scan_all()
+        self.export_package(
+            current_scan,
+            backup_path,
+            include_assets=True,
+            include_font_files=True,
+        )
+        return backup_path
+
+    def _admin_check_or_error(self, scan_result: ScanResult) -> dict[str, Any] | None:
+        if platform.system() != "Windows":
+            return None
+
+        admin_items = [item for item in scan_result.items if self._item_requires_admin(item)]
+        if not admin_items or SystemAPI.is_admin():
+            return None
+
+        return self._import_error_summary(
+            "admin_required",
+            "Administrator privileges are required before applying this package.",
+            total=len(scan_result.items),
+            skipped=len(scan_result.items),
+        )
+
+    def _item_requires_admin(self, item: ScannedItem) -> bool:
+        readonly_flag = item.metadata.get("readonly")
+        if isinstance(readonly_flag, bool) and readonly_flag:
+            return False
+
+        scanner = self._find_scanner_for_item(item)
+        if scanner is None:
+            return False
+
+        if item.source_type.value == "system_api":
+            return True
+
+        if item.source_type.value == "registry":
+            source_path = item.source_path.upper()
+            return source_path.startswith(("HKLM\\", "HKEY_LOCAL_MACHINE\\", "HKCR\\"))
+
+        if item.source_type.value == "file":
+            source_path = item.source_path.upper()
+            return source_path.startswith(("C:\\WINDOWS\\", "%SYSTEMROOT%\\"))
+
+        return False
+
+    def _utc_now_iso(self) -> str:
+        return datetime.now(UTC).isoformat(timespec="microseconds")
+
+    def _safe_filename_component(self, value: str) -> str:
+        cleaned = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in value)
+        return cleaned[:80] or "unknown"
 
     def _create_restore_point_or_error(self, total: int) -> dict[str, Any] | None:
         try:
@@ -674,6 +1009,9 @@ class StyleEngine:
                     "operation": self._infer_import_operation(item, action),
                     "target": item.source_path,
                     "risk": risk,
+                    "requires_admin": (
+                        self._item_requires_admin(item) if action == "apply" else False
+                    ),
                     "reason": reason,
                     "risk_reason": risk_reason,
                 }

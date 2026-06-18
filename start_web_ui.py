@@ -48,6 +48,23 @@ CMD_MAP = {
 }
 
 
+class ApiError(Exception):
+    """Structured error returned by the local Web API."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status_code: int = 500,
+        data: object | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+        self.data = data
+
+
 # Direct module imports for frozen mode
 def get_engine():
     """Get StyleEngine instance."""
@@ -71,6 +88,10 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         )
 
     def do_GET(self):
+        if self.path == "/api/status":
+            self._send_json(200, self._api_success(self.status_payload()))
+            return
+
         if self.path == "/":
             self.path = "/index.html"
 
@@ -90,32 +111,69 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         try:
             payload = json.loads(post_body) if post_body else {}
         except json.JSONDecodeError:
-            self.send_error(400, "Invalid JSON body")
+            self._send_json(
+                400,
+                self._api_error("invalid_json", "Invalid JSON body"),
+            )
             return
 
         command_name = self.path.replace("/api/", "")
 
         try:
             result = self.dispatch_command(command_name, payload)
-
-            # Send response
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-
-            # If the result is a dict/list, dump it.
-            # If it's a string (JSON string from CLI), dump it as a string.
-            # Tauri backend returns a String which contains JSON.
-            # So here we return a JSON stringified String.
-            self.wfile.write(json.dumps(result).encode("utf-8"))
-
+            self._send_json(200, self._api_success(result))
+        except ApiError as e:
+            self._send_json(
+                e.status_code,
+                self._api_error(e.code, e.message, data=e.data),
+            )
+        except ValueError as e:
+            self._send_json(
+                400,
+                self._api_error("invalid_request", str(e)),
+            )
         except Exception as e:
-            self.send_response(500)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json(
+                500,
+                self._api_error("internal_error", str(e)),
+            )
+
+    def _send_json(self, status_code, payload):
+        self.send_response(status_code)
+        self.send_header("Content-type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    def _api_success(self, data, message="OK"):
+        return {
+            "ok": True,
+            "data": data,
+            "error": None,
+            "code": "ok",
+            "message": message,
+        }
+
+    def _api_error(self, code, message, data=None):
+        return {
+            "ok": False,
+            "data": data,
+            "error": message,
+            "code": code,
+            "message": message,
+        }
+
+    def status_payload(self):
+        return {
+            "status": "ok",
+            "mode": "frozen" if IS_FROZEN else "development",
+            "frontend_dir": str(FRONTEND_DIR),
+            "src_dir": str(SRC_DIR),
+        }
 
     def dispatch_command(self, name, payload):
+        if name == "status":
+            return self.status_payload()
+
         # In frozen mode, call modules directly
         if IS_FROZEN:
             return self.dispatch_command_direct(name, payload)
@@ -160,10 +218,13 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
             return ""  # Not supported in web mode
 
         else:
-            raise ValueError(f"Unknown command: {name}")
+            raise ApiError("unknown_command", f"Unknown command: {name}", status_code=404)
 
     def dispatch_command_direct(self, name, payload):
         """Direct module calls for frozen mode (no subprocess)."""
+        if name == "status":
+            return self.status_payload()
+
         if name == "scan":
             engine = get_engine()
             categories = payload.get("categories")
@@ -235,13 +296,20 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
                     dry_run=bool(payload.get("dryRun")),
                     create_restore_point=not bool(payload.get("skipRestore")),
                 )
+                if summary.get("error_code"):
+                    raise ApiError(
+                        str(summary.get("error_code")),
+                        str(summary.get("error")),
+                        status_code=400,
+                        data=summary,
+                    )
                 return summary
             finally:
                 if temp_path and os.path.exists(temp_path):
                     os.remove(temp_path)
 
         else:
-            raise ValueError(f"Unknown command: {name}")
+            raise ApiError("unknown_command", f"Unknown command: {name}", status_code=404)
 
     def run_cli_command(self, base_cmd, payload, args_mapper):
         cmd = base_cmd.copy()
@@ -367,7 +435,21 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         )
 
         if result.returncode != 0:
-            raise Exception(f"Command failed: {result.stderr}")
+            message = (
+                result.stderr.strip()
+                or result.stdout.strip()
+                or (f"Command failed with exit code {result.returncode}")
+            )
+            raise ApiError(
+                "command_failed",
+                message,
+                status_code=500,
+                data={
+                    "returncode": result.returncode,
+                    "stdout": result.stdout.strip(),
+                    "stderr": result.stderr.strip(),
+                },
+            )
 
         return result.stdout.strip()
 

@@ -232,11 +232,18 @@ def import_config(
 
     if summary.get("error_code"):
         console.print(f"[red]{summary.get('error')} ({summary.get('error_code')})[/red]")
+        if summary.get("import_log_path"):
+            console.print(f"[yellow]导入日志: {summary.get('import_log_path')}[/yellow]")
         raise typer.Exit(code=1)
 
     if dry_run:
         _print_dry_run_plan(summary)
         console.print("[yellow]Dry-run: 未应用任何更改[/yellow]")
+    else:
+        if summary.get("pre_import_backup_path"):
+            console.print(f"[green]导入前备份: {summary.get('pre_import_backup_path')}[/green]")
+        if summary.get("import_log_path"):
+            console.print(f"[green]导入日志: {summary.get('import_log_path')}[/green]")
 
 
 @app.command()

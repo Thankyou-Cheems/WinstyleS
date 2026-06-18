@@ -39,6 +39,9 @@ winstyles import ./my-style.zip --skip-restore-point
 导入安全约定：
 - 默认 apply 会先创建系统还原点；创建失败返回 `aborted=true`、`error_code=restore_point_failed`，并且不会执行扫描器写入。
 - `--skip-restore-point` 是唯一跳过还原点失败中止的显式覆盖。
+- apply 前统一执行管理员权限检查；HKLM/HKCR 注册表、系统 API、Windows 系统目录文件等需要提升权限的项会在权限不足时返回 `error_code=admin_required`，不会执行部分导入。
+- apply 前会自动扫描当前系统并导出导入前备份包到 `~/.winstyles/backups/pre_import_*.zip`；备份失败返回 `error_code=pre_import_backup_failed`，不会继续写入。
+- 每次实际导入会生成 `~/.winstyles/import_logs/<timestamp>_<scan_id>/import_log.json`，记录加载、权限、还原点、备份、资源重定位和逐项 apply 结果。
 - zip 导入必须先校验成员路径，拒绝绝对路径、盘符路径和 `..` 路径穿越。
 - `scan.json` 缺失或无效时返回结构化错误，不执行部分导入。
 - Windows Terminal / VS Code 写回前必须解析现有 JSONC；解析失败时返回失败并保持原文件不变。
@@ -103,6 +106,33 @@ winstyles import ./my-style.zip --skip-restore-point
 
 Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
 
+- `GET /api/status` 或 `POST /api/status`
+  - 返回本地服务状态、运行模式和资源目录，用于前端启动时连通性检查。
+
+所有 API 返回统一 envelope：
+
+```json
+{
+  "ok": true,
+  "data": {},
+  "error": null,
+  "code": "ok",
+  "message": "OK"
+}
+```
+
+错误返回使用同一结构，`ok=false`，并提供稳定 `code` 与可读 `message`：
+
+```json
+{
+  "ok": false,
+  "data": null,
+  "error": "Invalid JSON body",
+  "code": "invalid_json",
+  "message": "Invalid JSON body"
+}
+```
+
 - `POST /api/scan`
   - 输入：`{ "categories": ["fonts","terminal"], "format": "table|json|yaml", "modifiedOnly": true }`
   - 行为：`format=table` 时后端仍返回 JSON 数据（供前端渲染表格）；`modifiedOnly` 在脚本模式与打包模式都生效
@@ -126,4 +156,11 @@ Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
   - 输入方式 B：`{ "fileName": "my-style.zip", "fileBase64": "<base64/data-url>", "dryRun": true, "skipRestore": true }`
   - 行为：当传入 `fileBase64` 时，后端会写入临时 zip 再执行导入；导入时会将包内 `assets` 重定位到 `~/.winstyles/imported_assets/<scan_id>` 再应用，避免跨设备路径失效
   - dry-run 返回除计数外还包含 `dry_run_plan`（逐项预览）与 `risk_summary`，且不会触发资源重定位
-  - 错误返回沿用核心导入摘要字段：`aborted`、`error_code`、`error`、`applied=0`
+  - 导入中止时，核心导入摘要会放入错误 envelope 的 `data`，保留 `aborted`、`error_code`、`error`、`applied=0`、`import_log_path` 等字段
+
+## 发布治理
+
+- 发布前检查脚本：`uv run --python 3.12 --extra dev python scripts/release_check.py`
+- 快速检查脚本：`uv run --python 3.12 --extra dev python scripts/release_check.py --quick`
+- 完整检查顺序：`black --check` -> `ruff check` -> `mypy` -> `pytest` -> `winstyles --version` -> `winstyles scan -f json`
+- 版本号、依赖、CLI 行为、仓库链接变更必须同步更新 `CHANGELOG.md`、`README.md` 和本设计文档中对应段落。

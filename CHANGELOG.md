@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+### Added
+- 新增导入 apply 前管理员权限统一检查；权限不足时返回 `admin_required` 且不执行部分导入
+- 新增导入前自动备份包与 `import_log.json` 审计日志，便于失败定位与回退
+- 新增 Web API `/api/status` 与统一响应 envelope：`{ok,data,error,code,message}`
+- 新增 `scripts/release_check.py`，脚本化发布前质量门与关键命令检查
+
 ### Fixed
 - 修复字体更新页面运行时异常：使用 `ScannedItem.current_value`，避免访问不存在字段
 - 修复开源字体模型与配置包字体模型重名冲突：新增 `OpenSourceFontInfo` 并替换相关引用
@@ -40,6 +46,8 @@
 
 ### Changed
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发
+- Web 前端统一处理后端 envelope 与错误码，扫描/导出/导入/报告等流程复用同一失败提示机制
+- README 新增能力分层说明，明确已完成能力、实验性限制与本地 Web GUI 边界
 - 增强字体扫描器：为 FontSubstitutes / FontLink 补充字体文件关联，便于导出字体资产
 - 打包模式（frozen）新增直接导出实现，不再返回 `Export not yet supported in packaged mode`
 - `PyYAML` 现在是默认依赖；`pywin32` 限定为 Windows 平台依赖，避免 Linux/WSL 质量门安装失败

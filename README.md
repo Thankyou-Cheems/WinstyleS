@@ -15,6 +15,19 @@
 - 🚀 **快速导入** - 在新设备上一键还原所有设置
 - 🛡️ **安全回滚** - 修改前自动创建系统还原点
 
+## 能力状态
+
+已完成并有测试覆盖：
+- 扫描/报告/导出基础链路，以及字体、终端、主题、壁纸、鼠标指针、VS Code 主要配置项
+- zip 配置包路径安全校验、dry-run 逐项计划、导入前系统还原点检查
+- 导入前备份包、`import_log.json` 审计日志、需要提升权限时的统一中止提示
+- Web GUI 的扫描、报告、导出、导入、字体更新检查与统一 API 错误结构
+
+实验性或受环境限制：
+- 写回 Windows Terminal / PowerShell Profile / VS Code 配置已实现，但仍建议先执行 `--dry-run`
+- 系统级注册表和字体相关项依赖 Windows 权限；需要管理员权限的包会在 apply 前中止
+- Web GUI 是本地服务模式，不提供远程访问或多用户隔离
+
 ## 📋 支持的配置项
 
 | 类别 | 配置项 |
@@ -58,7 +71,8 @@ winstyles import ./my-style.zip --dry-run
 
 # 导入配置包
 winstyles import ./my-style.zip
-# 默认会先创建系统还原点；如需显式跳过可使用 --skip-restore-point
+# 默认会先检查权限、创建系统还原点、生成导入前备份和 import_log.json；
+# 如需显式跳过系统还原点可使用 --skip-restore-point
 
 # 生成报告但跳过联网更新检查
 winstyles report --no-check-updates
@@ -69,6 +83,8 @@ winstyles report --no-check-updates
 - 导入端先预览：`winstyles import ./my-style.zip --dry-run`
 - 确认后执行：`winstyles import ./my-style.zip`
 - zip 包会在导入前做路径安全校验；系统还原点创建失败时默认中止导入
+- 需要管理员权限的配置项会在 apply 前统一检查；权限不足时不会执行部分导入
+- 实际导入会生成 `~/.winstyles/backups/pre_import_*.zip` 和 `~/.winstyles/import_logs/*/import_log.json`
 - Windows Terminal / VS Code 设置写回会先解析现有 JSONC，解析失败时不会覆盖原文件
 
 报告说明：
@@ -104,6 +120,12 @@ uv run --python 3.12 --extra dev pytest tests -v --cov=src/winstyles --cov-repor
 uv run --python 3.12 --extra dev ruff check src tests
 uv run --python 3.12 --extra dev black --check src tests
 uv run --python 3.12 --extra dev mypy src/winstyles
+
+# 发布前检查（完整质量门 + 关键命令）
+uv run --python 3.12 --extra dev python scripts/release_check.py
+
+# 快速检查（仅 winstyles --version 与 winstyles scan -f json）
+uv run --python 3.12 --extra dev python scripts/release_check.py --quick
 ```
 
 ## 📖 文档
