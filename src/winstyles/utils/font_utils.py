@@ -8,11 +8,15 @@ import fnmatch
 import importlib
 import json
 import os
-import winreg
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, TypedDict
+
+try:
+    import winreg as _winreg
+except ImportError:
+    _winreg = None  # type: ignore[assignment]
 
 
 class OpenSourceFontMatch(TypedDict):
@@ -158,16 +162,20 @@ def find_font_paths(font_name: str) -> list[Path]:
     exact_matches: list[Path] = []
     fuzzy_matches: list[Path] = []
 
+    if _winreg is None:
+        return []
+
+    winreg_module: Any = _winreg
     for root, reg_path in (
-        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
-        (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
+        (winreg_module.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
+        (winreg_module.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
     ):
         try:
-            with winreg.OpenKey(root, reg_path) as key:
+            with winreg_module.OpenKey(root, reg_path) as key:
                 i = 0
                 while True:
                     try:
-                        name, value, _ = winreg.EnumValue(key, i)
+                        name, value, _ = winreg_module.EnumValue(key, i)
                         i += 1
                     except OSError:
                         break

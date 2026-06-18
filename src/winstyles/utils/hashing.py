@@ -101,6 +101,12 @@ def generate_checksum_file(
     output_path = dir_path / output_file
 
     hashes = compute_hashes_for_directory(directory, algorithm)
+    try:
+        output_relative_path = str(output_path.relative_to(dir_path))
+    except ValueError:
+        output_relative_path = None
+    if output_relative_path is not None:
+        hashes.pop(output_relative_path, None)
 
     with open(output_path, "w", encoding="utf-8") as f:
         for relative_path, file_hash in sorted(hashes.items()):
@@ -147,7 +153,7 @@ def verify_checksum_file(
             expected_hash, relative_path = parts
 
             # 转换为本地路径
-            file_path = dir_path / relative_path.replace("/", "\\")
+            file_path = dir_path / Path(relative_path.replace("\\", "/"))
 
             if not file_path.exists():
                 failed_files.append(f"{relative_path} (missing)")

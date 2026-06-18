@@ -179,22 +179,89 @@ class VSCodeScanner(BaseScanner):
 
     def _parse_jsonc(self, content: str) -> dict[str, Any]:
         """解析带注释的 JSON (JSONC)"""
-        import re
+        stripped = self._strip_trailing_commas(self._strip_jsonc_comments(content))
+        parsed = json.loads(stripped)
+        if not isinstance(parsed, dict):
+            raise ValueError("settings JSON must contain an object")
+        return {str(key): value for key, value in parsed.items()}
 
-        # 移除单行注释
-        content = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
-        # 移除多行注释
-        content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
-        # 移除尾随逗号
-        content = re.sub(r",(\s*[}\]])", r"\1", content)
+    def _strip_jsonc_comments(self, content: str) -> str:
+        result: list[str] = []
+        in_string = False
+        escaped = False
+        i = 0
+        while i < len(content):
+            char = content[i]
+            if in_string:
+                result.append(char)
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                i += 1
+                continue
 
-        try:
-            parsed = json.loads(content)
-            if isinstance(parsed, dict):
-                return {str(key): value for key, value in parsed.items()}
-            return {}
-        except json.JSONDecodeError:
-            return {}
+            if char == '"':
+                in_string = True
+                result.append(char)
+                i += 1
+                continue
+            if char == "/" and i + 1 < len(content) and content[i + 1] == "/":
+                i += 2
+                while i < len(content) and content[i] not in "\r\n":
+                    i += 1
+                continue
+            if char == "/" and i + 1 < len(content) and content[i + 1] == "*":
+                i += 2
+                while i < len(content):
+                    if i + 1 < len(content) and content[i] == "*" and content[i + 1] == "/":
+                        i += 2
+                        break
+                    if content[i] in "\r\n":
+                        result.append(content[i])
+                    i += 1
+                continue
+
+            result.append(char)
+            i += 1
+        return "".join(result)
+
+    def _strip_trailing_commas(self, content: str) -> str:
+        result: list[str] = []
+        in_string = False
+        escaped = False
+        i = 0
+        while i < len(content):
+            char = content[i]
+            if in_string:
+                result.append(char)
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                i += 1
+                continue
+
+            if char == '"':
+                in_string = True
+                result.append(char)
+                i += 1
+                continue
+            if char == ",":
+                j = i + 1
+                while j < len(content) and content[j].isspace():
+                    j += 1
+                if j < len(content) and content[j] in "}]":
+                    i += 1
+                    continue
+
+            result.append(char)
+            i += 1
+        return "".join(result)
 
     def apply(self, item: ScannedItem) -> bool:
         """应用 VS Code 设置"""

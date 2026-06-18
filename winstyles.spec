@@ -26,6 +26,7 @@ hiddenimports += [
     'tempfile',
     'winreg',
     'ctypes',
+    'yaml',
 ]
 
 a = Analysis(
@@ -36,6 +37,15 @@ a = Analysis(
     ],
     binaries=[],
     datas=[
+        # Include runtime data files used by StyleEngine and ReportGenerator
+        (
+            os.path.join(project_root, 'data', 'defaults'),
+            os.path.join('winstyles', 'data', 'defaults'),
+        ),
+        (
+            os.path.join(project_root, 'data', 'opensource_fonts.json'),
+            os.path.join('winstyles', 'data'),
+        ),
         # Include frontend files for Web UI
         (os.path.join(project_root, 'frontend'), 'frontend'),
         # Include start_web_ui.py

@@ -230,6 +230,10 @@ def import_config(
         table.add_row(key, str(summary.get(key, 0)))
     console.print(table)
 
+    if summary.get("error_code"):
+        console.print(f"[red]{summary.get('error')} ({summary.get('error_code')})[/red]")
+        raise typer.Exit(code=1)
+
     if dry_run:
         _print_dry_run_plan(summary)
         console.print("[yellow]Dry-run: 未应用任何更改[/yellow]")
@@ -464,8 +468,7 @@ def report(
                 # Web mode expects a JSON string payload.
                 print(json.dumps(content, ensure_ascii=False))
                 return
-            # In CLI mode, avoid non-UTF8 console encoding issues by escaping non-ASCII.
-            print(json.dumps(content, ensure_ascii=True))
+            print(content)
             return
 
         # 默认保存到临时文件并显示
@@ -499,10 +502,16 @@ def gui() -> None:
 
     启动本地 Web 服务器并在浏览器中打开操作界面。
     """
-    from winstyles.gui.app import run_gui
-
     console.print("[bold blue]正在启动图形界面...[/bold blue]")
-    run_gui()
+    try:
+        from start_web_ui import run_server
+    except ImportError:
+        from winstyles.gui.app import run_gui
+
+        run_gui()
+        return
+
+    run_server()  # type: ignore[no-untyped-call]
 
 
 def _print_scan_output(result: ScanResult, items: list[ScannedItem], fmt: str) -> None:

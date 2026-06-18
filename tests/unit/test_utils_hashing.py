@@ -32,10 +32,12 @@ def test_checksum_roundtrip(tmp_path: Path) -> None:
     (nested / "b.txt").write_text("beta", encoding="utf-8")
 
     generate_checksum_file(str(tmp_path))
+    generate_checksum_file(str(tmp_path))
     ok, failed = verify_checksum_file(str(tmp_path))
 
     assert ok is True
     assert failed == []
+    assert "checksums.sha256" not in (tmp_path / "checksums.sha256").read_text(encoding="utf-8")
 
     hashes = compute_hashes_for_directory(str(tmp_path))
     assert "a.txt" in hashes

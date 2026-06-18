@@ -10,10 +10,12 @@ import platform
 import shutil
 import tempfile
 import zipfile
-from pathlib import Path
+from importlib import resources
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from winstyles.core.analyzer import DiffAnalyzer
+from winstyles.core.exceptions import PackageError
 from winstyles.domain.models import ExportOptions, Manifest, ScannedItem, ScanResult, SourceSystem
 from winstyles.domain.types import AssetType
 from winstyles.infra.filesystem import WindowsFileSystemAdapter
@@ -35,6 +37,20 @@ from winstyles.plugins.terminal import (
 from winstyles.plugins.theme import ThemeScanner
 from winstyles.plugins.vscode import VSCodeScanner
 from winstyles.plugins.wallpaper import WallpaperScanner
+from winstyles.utils.path import expand_path_vars
+
+
+def _winstyles_resource_path(*parts: str) -> Path:
+    """Resolve packaged resources first, then fall back to the source tree."""
+    try:
+        candidate = resources.files("winstyles").joinpath(*parts)
+        path = Path(str(candidate))
+        if path.exists():
+            return path
+    except (FileNotFoundError, ModuleNotFoundError, TypeError):
+        pass
+
+    return Path(__file__).resolve().parents[3].joinpath(*parts)
 
 
 class StyleEngine:
@@ -77,7 +93,7 @@ class StyleEngine:
 
     def _load_defaults(self) -> None:
         """加载 Windows 默认值数据库"""
-        defaults_dir = Path(__file__).resolve().parents[3] / "data" / "defaults"
+        defaults_dir = _winstyles_resource_path("data", "defaults")
         if not defaults_dir.exists():
             self._defaults_db = {}
             return
@@ -207,7 +223,7 @@ class StyleEngine:
         value = raw_value.strip()
         if not value:
             return value
-        expanded = os.path.expandvars(value)
+        expanded = expand_path_vars(value)
         return str(Path(expanded))
 
     def _normalize_dwm_color_default(self, raw_value: Any) -> Any:
@@ -330,21 +346,63 @@ class StyleEngine:
         """
         package_path = Path(package_path)
         if package_path.suffix.lower() == ".zip":
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                output_dir = Path(tmp_dir)
-                with zipfile.ZipFile(package_path, "r") as zip_ref:
-                    zip_ref.extractall(output_dir)
-                return self._import_from_dir(
-                    output_dir,
-                    dry_run=dry_run,
-                    create_restore_point=create_restore_point,
-                )
+            return self._import_from_zip(
+                package_path,
+                dry_run=dry_run,
+                create_restore_point=create_restore_point,
+            )
 
         return self._import_from_dir(
             package_path,
             dry_run=dry_run,
             create_restore_point=create_restore_point,
         )
+
+    def _import_from_zip(
+        self,
+        package_path: Path,
+        dry_run: bool,
+        create_restore_point: bool,
+    ) -> dict[str, Any]:
+        scan_result: ScanResult | None = None
+        if dry_run or create_restore_point:
+            try:
+                scan_result = self._load_scan_result_from_zip(package_path)
+            except zipfile.BadZipFile:
+                return self._import_error_summary("invalid_zip", "Invalid zip package")
+            except PackageError as exc:
+                return self._import_error_summary("unsafe_zip", str(exc))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                return self._import_error_summary("scan_json_invalid", "Invalid scan.json")
+
+            if scan_result is None:
+                return self._import_error_summary("scan_json_missing", "scan.json not found")
+
+        if dry_run:
+            assert scan_result is not None
+            return self._build_import_dry_run_summary(scan_result)
+
+        if create_restore_point:
+            assert scan_result is not None
+            restore_error = self._create_restore_point_or_error(len(scan_result.items))
+            if restore_error is not None:
+                return restore_error
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            try:
+                self._extract_zip_safely(package_path, output_dir)
+            except zipfile.BadZipFile:
+                return self._import_error_summary("invalid_zip", "Invalid zip package")
+            except PackageError as exc:
+                return self._import_error_summary("unsafe_zip", str(exc))
+            except OSError as exc:
+                return self._import_error_summary("zip_extract_failed", str(exc))
+            return self._import_from_dir(
+                output_dir,
+                dry_run=False,
+                create_restore_point=False,
+            )
 
     def _write_package(
         self,
@@ -434,6 +492,59 @@ class StyleEngine:
                 if file_path.is_file():
                     zip_ref.write(file_path, file_path.relative_to(source_dir))
 
+    def _load_scan_result_from_zip(self, package_path: Path) -> ScanResult | None:
+        with zipfile.ZipFile(package_path, "r") as zip_ref:
+            self._validate_zip_members(zip_ref)
+            if "scan.json" not in zip_ref.namelist():
+                return None
+            with zip_ref.open("scan.json") as handle:
+                payload = json.loads(handle.read().decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("scan.json must contain an object")
+                return ScanResult.model_validate(payload)
+
+    def _extract_zip_safely(self, package_path: Path, output_dir: Path) -> None:
+        with zipfile.ZipFile(package_path, "r") as zip_ref:
+            self._validate_zip_members(zip_ref)
+            for member in zip_ref.infolist():
+                target_path = self._zip_member_target(output_dir, member.filename)
+                if member.is_dir():
+                    target_path.mkdir(parents=True, exist_ok=True)
+                    continue
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                with zip_ref.open(member) as source, target_path.open("wb") as target:
+                    shutil.copyfileobj(source, target)
+
+    def _validate_zip_members(self, zip_ref: zipfile.ZipFile) -> None:
+        for member in zip_ref.infolist():
+            self._zip_member_target(Path("/tmp/winstyles-zip-validation"), member.filename)
+
+    def _zip_member_target(self, output_dir: Path, member_name: str) -> Path:
+        normalized_name = member_name.replace("\\", "/")
+        posix_path = PurePosixPath(normalized_name)
+        windows_path = PureWindowsPath(member_name)
+        if (
+            not member_name
+            or posix_path.is_absolute()
+            or windows_path.is_absolute()
+            or windows_path.drive
+            or windows_path.root
+        ):
+            raise PackageError(f"Unsafe zip member path: {member_name}")
+
+        parts = posix_path.parts
+        if not parts:
+            raise PackageError(f"Unsafe zip member path: {member_name}")
+        for part in parts:
+            if part in {"", ".", ".."}:
+                raise PackageError(f"Unsafe zip member path: {member_name}")
+
+        target_path = output_dir.joinpath(*parts)
+        output_root = output_dir.resolve()
+        if not target_path.resolve().is_relative_to(output_root):
+            raise PackageError(f"Unsafe zip member path: {member_name}")
+        return target_path
+
     def _import_from_dir(
         self,
         package_dir: Path,
@@ -442,30 +553,23 @@ class StyleEngine:
     ) -> dict[str, Any]:
         scan_path = package_dir / "scan.json"
         if not scan_path.exists():
-            return {"total": 0, "applied": 0, "failed": 0, "skipped": 0}
+            return self._import_error_summary("scan_json_missing", "scan.json not found")
 
-        scan_data = json.loads(scan_path.read_text(encoding="utf-8"))
-        scan_result = ScanResult.model_validate(scan_data)
-        resolved_scan = self._resolve_import_assets(scan_result, package_dir)
+        try:
+            scan_data = json.loads(scan_path.read_text(encoding="utf-8"))
+            scan_result = ScanResult.model_validate(scan_data)
+        except (OSError, json.JSONDecodeError, ValueError):
+            return self._import_error_summary("scan_json_invalid", "Invalid scan.json")
 
         if dry_run:
-            plan = self._build_dry_run_plan(resolved_scan.items)
-            would_apply = sum(1 for item in plan if item["action"] == "apply")
-            would_skip = len(plan) - would_apply
-            return {
-                "total": len(resolved_scan.items),
-                "applied": 0,
-                "failed": 0,
-                "skipped": len(resolved_scan.items),
-                "would_apply": would_apply,
-                "would_skip": would_skip,
-                "dry_run_plan": plan,
-                "risk_summary": self._summarize_risk(plan),
-            }
+            return self._build_import_dry_run_summary(scan_result)
 
         if create_restore_point:
-            restore_manager = RestorePointManager()
-            restore_manager.create_restore_point()
+            restore_error = self._create_restore_point_or_error(len(scan_result.items))
+            if restore_error is not None:
+                return restore_error
+
+        resolved_scan = self._resolve_import_assets(scan_result, package_dir)
 
         applied = 0
         failed = 0
@@ -494,6 +598,55 @@ class StyleEngine:
             "applied": applied,
             "failed": failed,
             "skipped": skipped,
+        }
+
+    def _build_import_dry_run_summary(self, scan_result: ScanResult) -> dict[str, Any]:
+        plan = self._build_dry_run_plan(scan_result.items)
+        would_apply = sum(1 for item in plan if item["action"] == "apply")
+        would_skip = len(plan) - would_apply
+        return {
+            "total": len(scan_result.items),
+            "applied": 0,
+            "failed": 0,
+            "skipped": len(scan_result.items),
+            "would_apply": would_apply,
+            "would_skip": would_skip,
+            "dry_run_plan": plan,
+            "risk_summary": self._summarize_risk(plan),
+        }
+
+    def _create_restore_point_or_error(self, total: int) -> dict[str, Any] | None:
+        try:
+            restore_manager = RestorePointManager()
+            created, _sequence_number = restore_manager.create_restore_point()
+        except Exception:
+            created = False
+
+        if created:
+            return None
+
+        return self._import_error_summary(
+            "restore_point_failed",
+            "Failed to create restore point; use --skip-restore-point to override.",
+            total=total,
+            skipped=total,
+        )
+
+    def _import_error_summary(
+        self,
+        error_code: str,
+        message: str,
+        total: int = 0,
+        skipped: int = 0,
+    ) -> dict[str, Any]:
+        return {
+            "total": total,
+            "applied": 0,
+            "failed": 0,
+            "skipped": skipped,
+            "aborted": True,
+            "error_code": error_code,
+            "error": message,
         }
 
     def _build_dry_run_plan(self, items: list[ScannedItem]) -> list[dict[str, Any]]:
@@ -651,6 +804,7 @@ class StyleEngine:
         if package_path.suffix.lower() == ".zip":
             try:
                 with zipfile.ZipFile(package_path, "r") as zip_ref:
+                    self._validate_zip_members(zip_ref)
                     if filename not in zip_ref.namelist():
                         return None
                     with zip_ref.open(filename) as handle:
@@ -658,7 +812,14 @@ class StyleEngine:
                         if isinstance(payload, dict):
                             return payload
                         return None
-            except (OSError, KeyError, json.JSONDecodeError):
+            except (
+                OSError,
+                KeyError,
+                UnicodeDecodeError,
+                json.JSONDecodeError,
+                zipfile.BadZipFile,
+                PackageError,
+            ):
                 return None
 
         file_path = package_path / filename

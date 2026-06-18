@@ -1,3 +1,18 @@
+# Normalize text files to LF in the repository. Windows-specific scripts can
+# opt into CRLF explicitly if the project adds them later.
+* text=auto eol=lf
+
+# Binary assets should not be line-ending normalized.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.7z binary
+*.exe binary
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads

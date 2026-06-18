@@ -3,6 +3,7 @@
 """
 
 import os
+import re
 from pathlib import Path
 
 # 常用环境变量及其对应的系统变量名
@@ -22,6 +23,74 @@ COMMON_VARS = [
     ("SYSTEMDRIVE", "%SYSTEMDRIVE%"),
 ]
 
+_WINDOWS_ENV_VAR_RE = re.compile(r"%([^%]+)%")
+
+
+def _get_env_case_insensitive(name: str) -> str | None:
+    """Look up environment variables using Windows-style case-insensitive names."""
+    value = os.environ.get(name)
+    if value:
+        return value
+
+    lowered_name = name.lower()
+    empty_match = value if value is not None else None
+    for env_name, env_value in os.environ.items():
+        if env_name.lower() == lowered_name:
+            if env_value:
+                return env_value
+            if empty_match is None:
+                empty_match = env_value
+
+    return empty_match
+
+
+def _expand_environment_vars(path: str) -> str:
+    """Expand both POSIX-style and Windows %VAR% environment references."""
+
+    def replace_windows_var(match: re.Match[str]) -> str:
+        value = _get_env_case_insensitive(match.group(1))
+        return match.group(0) if value is None else value
+
+    return os.path.expandvars(_WINDOWS_ENV_VAR_RE.sub(replace_windows_var, path))
+
+
+def expand_path_vars(path: str, normalize_separators: bool = False) -> str:
+    """
+    展开路径中的环境变量，不解析为绝对路径。
+
+    Args:
+        path: 包含环境变量的路径
+        normalize_separators: 是否将 Windows 反斜杠规范化为当前平台分隔符
+
+    Returns:
+        展开环境变量后的路径
+    """
+    expanded = _expand_environment_vars(path)
+    if normalize_separators:
+        return _normalize_separators(expanded)
+    return expanded
+
+
+def _normalize_separators(path: str) -> str:
+    if os.sep == "/":
+        return path.replace("\\", os.sep)
+    return path
+
+
+def _resolve_path(path: str) -> str:
+    normalized = expand_path_vars(path, normalize_separators=True)
+    return str(Path(normalized).resolve())
+
+
+def _is_same_or_child(path: str, parent: str) -> bool:
+    folded_path = path.lower()
+    folded_parent = parent.lower()
+
+    if folded_path == folded_parent:
+        return True
+
+    return folded_path.startswith(f"{folded_parent.rstrip(os.sep)}{os.sep}")
+
 
 def expand_vars(path: str) -> str:
     """
@@ -39,11 +108,7 @@ def expand_vars(path: str) -> str:
         >>> expand_vars("%APPDATA%\\Code\\User\\settings.json")
         "C:\\Users\\Alice\\AppData\\Roaming\\Code\\User\\settings.json"
     """
-    # 使用 os.path.expandvars 展开环境变量
-    expanded = os.path.expandvars(path)
-
-    # 规范化路径
-    return str(Path(expanded).resolve())
+    return _resolve_path(path)
 
 
 def collapse_vars(path: str, prefer_vars: bool = True) -> str:
@@ -67,25 +132,25 @@ def collapse_vars(path: str, prefer_vars: bool = True) -> str:
         return path
 
     # 规范化输入路径
-    path = str(Path(path).resolve())
+    path = _resolve_path(path)
 
     # 按照路径长度排序，优先匹配更长的路径
     sorted_vars = sorted(
         COMMON_VARS,
-        key=lambda x: len(os.environ.get(x[0], "")),
+        key=lambda x: len(_get_env_case_insensitive(x[0]) or ""),
         reverse=True,
     )
 
     for var_name, var_placeholder in sorted_vars:
-        var_value = os.environ.get(var_name, "")
+        var_value = _get_env_case_insensitive(var_name)
         if not var_value:
             continue
 
         # 规范化环境变量的值
-        var_value = str(Path(var_value).resolve())
+        var_value = _resolve_path(var_value)
 
         # 不区分大小写比较 (Windows)
-        if path.lower().startswith(var_value.lower()):
+        if _is_same_or_child(path, var_value):
             # 替换为环境变量
             relative_part = path[len(var_value) :]
             return f"{var_placeholder}{relative_part}"
@@ -107,14 +172,7 @@ def normalize_path(path: str) -> str:
     Returns:
         规范化后的路径
     """
-    # 先展开环境变量
-    expanded = os.path.expandvars(path)
-
-    # 解析为绝对路径
-    resolved = Path(expanded).resolve()
-
-    # 返回字符串形式
-    return str(resolved)
+    return _resolve_path(path)
 
 
 def get_env_vars_mapping() -> dict[str, str]:
@@ -142,11 +200,11 @@ def is_under_user_profile(path: str) -> bool:
     Returns:
         是否在用户目录下
     """
-    user_profile = os.environ.get("USERPROFILE", "")
+    user_profile = _get_env_case_insensitive("USERPROFILE") or ""
     if not user_profile:
         return False
 
     normalized_path = normalize_path(path)
     normalized_profile = normalize_path(user_profile)
 
-    return normalized_path.lower().startswith(normalized_profile.lower())
+    return _is_same_or_child(normalized_path, normalized_profile)

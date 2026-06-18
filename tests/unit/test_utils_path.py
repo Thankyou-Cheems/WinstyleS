@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from winstyles.utils.path import collapse_vars, expand_vars, is_under_user_profile
+from winstyles.utils.path import collapse_vars, expand_path_vars, expand_vars, is_under_user_profile
 
 
 def test_expand_vars_returns_absolute_path(monkeypatch, tmp_path: Path) -> None:
@@ -12,6 +12,24 @@ def test_expand_vars_returns_absolute_path(monkeypatch, tmp_path: Path) -> None:
 
     assert Path(expanded).is_absolute()
     assert expanded.lower().endswith(str(Path("Foo") / "bar.txt").lower())
+
+
+def test_expand_vars_handles_windows_env_names_case_insensitively(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("TESTVAR", str(tmp_path))
+
+    expanded = expand_vars(r"%testvar%\Foo\bar.txt")
+
+    assert expanded == str((tmp_path / "Foo" / "bar.txt").resolve())
+
+
+def test_expand_path_vars_can_preserve_windows_separators(monkeypatch) -> None:
+    monkeypatch.setenv("SystemRoot", r"C:\Windows")
+
+    expanded = expand_path_vars(r"%systemroot%\cursors\aero_arrow.cur")
+
+    assert expanded == r"C:\Windows\cursors\aero_arrow.cur"
 
 
 def test_collapse_vars_prefers_env_var(monkeypatch, tmp_path: Path) -> None:

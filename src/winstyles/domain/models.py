@@ -5,7 +5,7 @@ Pydantic 数据模型 - 定义核心数据结构
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from winstyles.domain.types import AssetType, ChangeType, SourceType
 
@@ -139,8 +139,7 @@ class Manifest(BaseModel):
         default_factory=ImportInstructions.model_construct, description="导入说明"
     )
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class OpenSourceFontInfo(BaseModel):

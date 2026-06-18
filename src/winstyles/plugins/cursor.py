@@ -14,6 +14,7 @@ from winstyles.domain.models import AssociatedFile, ScannedItem
 from winstyles.domain.types import AssetType, ChangeType, SourceType
 from winstyles.infra.registry import REG_DWORD
 from winstyles.plugins.base import BaseScanner
+from winstyles.utils.path import expand_path_vars
 
 
 class CursorScanner(BaseScanner):
@@ -66,9 +67,9 @@ class CursorScanner(BaseScanner):
         if not value:
             return None
 
-        expanded = os.path.expandvars(value)
-        if expanded.startswith(r"\??\\"):
-            expanded = expanded[4:]
+        if value.startswith("\\??\\"):
+            value = value[4:]
+        expanded = expand_path_vars(value, normalize_separators=True)
         candidate = Path(expanded)
 
         if not candidate.is_absolute():

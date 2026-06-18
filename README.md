@@ -54,10 +54,11 @@ winstyles export ./my-style.zip --include-font-files
 
 # 预览导入（不实际应用）
 winstyles import ./my-style.zip --dry-run
-# dry-run 会输出逐项计划（action/target/risk），用于导入前审查
+# dry-run 会输出逐项计划（action/target/risk），且不会复制资源或写入设置
 
 # 导入配置包
 winstyles import ./my-style.zip
+# 默认会先创建系统还原点；如需显式跳过可使用 --skip-restore-point
 
 # 生成报告但跳过联网更新检查
 winstyles report --no-check-updates
@@ -67,6 +68,12 @@ winstyles report --no-check-updates
 - 导出端使用：`winstyles export ./my-style.zip --include-font-files`
 - 导入端先预览：`winstyles import ./my-style.zip --dry-run`
 - 确认后执行：`winstyles import ./my-style.zip`
+- zip 包会在导入前做路径安全校验；系统还原点创建失败时默认中止导入
+- Windows Terminal / VS Code 设置写回会先解析现有 JSONC，解析失败时不会覆盖原文件
+
+报告说明：
+- CLI 模式下 `winstyles report` 直接输出 Markdown；HTML 报告会转义扫描值并过滤不安全链接
+- YAML 输出依赖已包含在默认安装中
 
 ### 启动 Web GUI
 ```bash
@@ -91,11 +98,12 @@ cd WinstyleS
 pip install -e ".[dev]"
 
 # 运行测试
-pytest
+uv run --python 3.12 --extra dev pytest tests -v --cov=src/winstyles --cov-report=term-missing --capture=no
 
 # 运行代码检查
-ruff check src/
-black --check src/
+uv run --python 3.12 --extra dev ruff check src tests
+uv run --python 3.12 --extra dev black --check src tests
+uv run --python 3.12 --extra dev mypy src/winstyles
 ```
 
 ## 📖 文档

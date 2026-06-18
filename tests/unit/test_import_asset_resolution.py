@@ -1,11 +1,16 @@
 from pathlib import Path
 
+from pytest import MonkeyPatch
+
 from winstyles.core.engine import StyleEngine
 from winstyles.domain.models import AssociatedFile, ScannedItem, ScanResult
 from winstyles.domain.types import AssetType, ChangeType, SourceType
 
 
-def test_resolve_import_assets_rewrites_cursor_and_wallpaper_paths(tmp_path, monkeypatch) -> None:
+def test_resolve_import_assets_rewrites_cursor_and_wallpaper_paths(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     package_dir = tmp_path / "package"
@@ -18,6 +23,8 @@ def test_resolve_import_assets_rewrites_cursor_and_wallpaper_paths(tmp_path, mon
 
     scan_result = ScanResult(
         scan_id="202602100001",
+        os_version="",
+        duration_ms=None,
         items=[
             ScannedItem(
                 category="cursor",
@@ -33,6 +40,8 @@ def test_resolve_import_assets_rewrites_cursor_and_wallpaper_paths(tmp_path, mon
                         name="arrow.cur",
                         path=r"C:\old\arrow.cur",
                         exists=True,
+                        size_bytes=None,
+                        sha256=None,
                     )
                 ],
             ),
@@ -50,6 +59,8 @@ def test_resolve_import_assets_rewrites_cursor_and_wallpaper_paths(tmp_path, mon
                         name="wall.jpg",
                         path=r"C:\old\wall.jpg",
                         exists=True,
+                        size_bytes=None,
+                        sha256=None,
                     )
                 ],
             ),
@@ -61,13 +72,19 @@ def test_resolve_import_assets_rewrites_cursor_and_wallpaper_paths(tmp_path, mon
 
     cursor_item = resolved.items[0]
     wallpaper_item = resolved.items[1]
-    assert cursor_item.current_value.endswith(r"imported_assets\202602100001\cursor\arrow.cur")
-    assert wallpaper_item.current_value.endswith(r"imported_assets\202602100001\wallpaper\wall.jpg")
+    cursor_target = (
+        tmp_path / ".winstyles" / "imported_assets" / "202602100001" / "cursor" / "arrow.cur"
+    )
+    wallpaper_target = (
+        tmp_path / ".winstyles" / "imported_assets" / "202602100001" / "wallpaper" / "wall.jpg"
+    )
+    assert cursor_item.current_value == str(cursor_target)
+    assert wallpaper_item.current_value == str(wallpaper_target)
     assert Path(cursor_item.associated_files[0].path).exists()
     assert Path(wallpaper_item.associated_files[0].path).exists()
 
 
-def test_find_asset_in_package_supports_hashed_fallback(tmp_path) -> None:
+def test_find_asset_in_package_supports_hashed_fallback(tmp_path: Path) -> None:
     category_dir = tmp_path / "fonts"
     category_dir.mkdir()
     hashed = category_dir / "maple_123456.ttf"

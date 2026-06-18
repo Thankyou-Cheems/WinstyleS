@@ -15,6 +15,11 @@ last-touched
 
 # Local version tracking (prevents upgrade notification spam after git ops)
 .local_version
+.auto-import-issues.jsonl
+
+# Local bd 1.0.5 embedded backend and backup state
+embeddeddolt/
+backup/
 
 # Legacy database files
 db.sqlite

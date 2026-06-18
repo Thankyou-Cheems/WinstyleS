@@ -2,10 +2,10 @@
 类型定义 - 枚举和类型别名
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class ChangeType(str, Enum):
+class ChangeType(StrEnum):
     """变更类型"""
 
     ADDED = "added"  # 新增配置（默认值库中不存在）
@@ -14,7 +14,7 @@ class ChangeType(str, Enum):
     REMOVED = "removed"  # 已删除（仅在对比两个包时使用）
 
 
-class Category(str, Enum):
+class Category(StrEnum):
     """配置类别"""
 
     FONTS = "fonts"  # 系统字体
@@ -27,7 +27,7 @@ class Category(str, Enum):
     EXPLORER = "explorer"  # 资源管理器
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     """配置来源类型"""
 
     REGISTRY = "registry"  # Windows 注册表
@@ -35,7 +35,7 @@ class SourceType(str, Enum):
     SYSTEM_API = "system_api"  # Windows API
 
 
-class AssetType(str, Enum):
+class AssetType(StrEnum):
     """资源文件类型"""
 
     FONT = "font"  # 字体文件

@@ -30,10 +30,19 @@ winstyles export ./my-style.zip
 # 预览导入（不实际应用）
 winstyles import ./my-style.zip --dry-run
 # 输出摘要 + Dry-run Plan（逐项 action/target/risk/reason）
+# 不创建 ~/.winstyles/imported_assets，不复制资源，不写注册表/配置文件
 
 # 导入并跳过还原点
 winstyles import ./my-style.zip --skip-restore-point
 ```
+
+导入安全约定：
+- 默认 apply 会先创建系统还原点；创建失败返回 `aborted=true`、`error_code=restore_point_failed`，并且不会执行扫描器写入。
+- `--skip-restore-point` 是唯一跳过还原点失败中止的显式覆盖。
+- zip 导入必须先校验成员路径，拒绝绝对路径、盘符路径和 `..` 路径穿越。
+- `scan.json` 缺失或无效时返回结构化错误，不执行部分导入。
+- Windows Terminal / VS Code 写回前必须解析现有 JSONC；解析失败时返回失败并保持原文件不变。
+- 包内 `assets` 仅在实际 apply 时重定位，dry-run 只基于原始扫描项生成预览。
 
 ---
 
@@ -104,7 +113,7 @@ Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
 
 - `POST /api/generate_report`
   - 输入：`{ "format": "markdown|html", "checkUpdates": true }`
-  - 行为：`checkUpdates=false` 时跳过字体更新检查（减少联网请求）
+  - 行为：`checkUpdates=false` 时跳过字体更新检查（减少联网请求）；HTML 输出会转义扫描值并过滤不安全链接协议
 
 - `POST /api/check_font_updates`
   - 行为：执行真实字体扫描与更新检查，返回更新列表（不再返回固定空数组）
@@ -116,4 +125,5 @@ Web GUI 通过 `start_web_ui.py` 提供的本地 API 调用后端能力。
   - 输入方式 A：`{ "path": "C:\\...\\my-style.zip", "dryRun": true, "skipRestore": true }`
   - 输入方式 B：`{ "fileName": "my-style.zip", "fileBase64": "<base64/data-url>", "dryRun": true, "skipRestore": true }`
   - 行为：当传入 `fileBase64` 时，后端会写入临时 zip 再执行导入；导入时会将包内 `assets` 重定位到 `~/.winstyles/imported_assets/<scan_id>` 再应用，避免跨设备路径失效
-  - dry-run 返回除计数外还包含 `dry_run_plan`（逐项预览）与 `risk_summary`
+  - dry-run 返回除计数外还包含 `dry_run_plan`（逐项预览）与 `risk_summary`，且不会触发资源重定位
+  - 错误返回沿用核心导入摘要字段：`aborted`、`error_code`、`error`、`applied=0`

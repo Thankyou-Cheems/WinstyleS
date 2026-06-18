@@ -27,11 +27,23 @@
 - 修复 `infra.registry` 在非 Windows 平台导入崩溃问题：为 `winreg` 增加兼容保护
 - 修复 Web 前端扫描结果复制按钮目标错误：改为复制 `scanResults` 内容
 - 增强导入 dry-run：输出逐项计划（action/target/risk/reason）与风险汇总，不再仅有计数
+- 修复导入 dry-run 仍会复制包内 assets 的问题，dry-run 现在不会创建目录、复制文件或写入设置
+- 修复系统还原点创建失败仍继续导入的问题，默认导入会中止并返回结构化错误，`--skip-restore-point` 可显式覆盖
+- 修复 zip 导入不安全解包问题，拒绝绝对路径和路径穿越成员
+- 修复 Windows Terminal / VS Code 设置解析失败时可能覆盖原文件的问题，JSONC 解析会保留字符串中的 URL 并在无效配置时拒绝写入
+- 修复 HTML 报告未转义扫描值的问题，并过滤不安全链接协议
+- 修复 checksum round-trip：生成校验和时不再把 `checksums.sha256` 自身写入校验清单，校验路径兼容 Windows/WSL/Linux
+- 修复 `%SystemRoot%` 等 Windows 风格环境变量在 WSL 测试中的展开与大小写匹配问题
+- 修复 `winstyles report` 默认 stdout 输出 JSON 字符串的问题，现在 CLI 模式直接输出可读 Markdown
+- 修复 wheel/PyInstaller 运行时资源缺失问题，打包产物包含 defaults、开源字体库、Web UI 与 `start_web_ui.py`
+- 修复 Pydantic v2 `class Config` 弃用告警，并迁移 Ruff 配置到 `tool.ruff.lint`
 
 ### Changed
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发
 - 增强字体扫描器：为 FontSubstitutes / FontLink 补充字体文件关联，便于导出字体资产
 - 打包模式（frozen）新增直接导出实现，不再返回 `Export not yet supported in packaged mode`
+- `PyYAML` 现在是默认依赖；`pywin32` 限定为 Windows 平台依赖，避免 Linux/WSL 质量门安装失败
+- 仓库文本文件通过 `.gitattributes` 统一按 LF 归一化
 
 ## [0.3.0] - 2026-01-27
 

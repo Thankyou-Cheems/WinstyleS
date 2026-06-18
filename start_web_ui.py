@@ -12,6 +12,12 @@ from pathlib import Path
 # Config
 PORT = 8000
 
+
+def _resolve_src_dir(root_dir: Path) -> Path:
+    src_dir = root_dir / "src"
+    return src_dir if src_dir.exists() else root_dir
+
+
 # Detect if running as bundled executable
 if getattr(sys, "frozen", False):
     # Running as compiled executable
@@ -23,7 +29,7 @@ else:
     # Running as script
     ROOT_DIR = Path(__file__).parent
     FRONTEND_DIR = ROOT_DIR / "frontend"
-    SRC_DIR = ROOT_DIR / "src"
+    SRC_DIR = _resolve_src_dir(ROOT_DIR)
     IS_FROZEN = False
 
 # Add src to path to allow running modules if needed (though we use subprocess)

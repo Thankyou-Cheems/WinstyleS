@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from start_web_ui import ApiHandler
+from start_web_ui import ApiHandler, _resolve_src_dir
 from winstyles.domain.models import ScannedItem, ScanResult
 from winstyles.domain.types import ChangeType, SourceType
 
@@ -15,6 +15,15 @@ def test_map_scan_args_uses_json_for_table_and_supports_modified_only() -> None:
         }
     )
     assert args == ["-c", "fonts", "-c", "terminal", "-f", "json", "--modified-only"]
+
+
+def test_resolve_src_dir_falls_back_for_installed_layout(tmp_path) -> None:
+    assert _resolve_src_dir(tmp_path) == tmp_path
+
+    source_dir = tmp_path / "src"
+    source_dir.mkdir()
+
+    assert _resolve_src_dir(tmp_path) == source_dir
 
 
 def test_map_export_args_supports_include_font_files() -> None:

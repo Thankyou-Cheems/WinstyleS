@@ -10,15 +10,34 @@ ReportGenerator - 扫描报告生成器
 from __future__ import annotations
 
 import fnmatch
+import html
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from importlib import resources
 from pathlib import Path
+from urllib.parse import urlparse
 
 from winstyles.core.update_checker import UpdateChecker, UpdateInfo
 from winstyles.domain.models import OpenSourceFontInfo, ScannedItem, ScanResult
 from winstyles.domain.types import ChangeType
 from winstyles.utils.font_utils import find_font_path, get_font_version
+
+_ALLOWED_HREF_SCHEMES = {"http", "https", "mailto"}
+
+
+def _winstyles_resource_path(*parts: str) -> Path:
+    """Resolve packaged resources first, then fall back to the source tree."""
+    try:
+        candidate = resources.files("winstyles").joinpath(*parts)
+        path = Path(str(candidate))
+        if path.exists():
+            return path
+    except (FileNotFoundError, ModuleNotFoundError, TypeError):
+        pass
+
+    return Path(__file__).resolve().parents[3].joinpath(*parts)
 
 
 @dataclass
@@ -87,7 +106,7 @@ class ReportGenerator:
 
         # 回退到本地
         if not data:
-            db_path = Path(__file__).resolve().parents[3] / "data" / "opensource_fonts.json"
+            db_path = _winstyles_resource_path("data", "opensource_fonts.json")
             if db_path.exists():
                 try:
                     with open(db_path, encoding="utf-8") as f:
@@ -493,10 +512,10 @@ class ReportGenerator:
 
     def _inline_md(self, text: str) -> str:
         """处理行内 Markdown"""
-        import re
+        text = html.escape(text, quote=True)
 
         # 链接
-        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", self._render_link, text)
         # 粗体
         text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
         # 行内代码
@@ -505,3 +524,24 @@ class ReportGenerator:
         text = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", text)
 
         return text
+
+    @staticmethod
+    def _render_link(match: re.Match[str]) -> str:
+        label = match.group(1)
+        href = html.unescape(match.group(2)).strip()
+        if not ReportGenerator._is_safe_href(href):
+            return label
+
+        escaped_href = html.escape(href, quote=True)
+        return f'<a href="{escaped_href}">{label}</a>'
+
+    @staticmethod
+    def _is_safe_href(href: str) -> bool:
+        if not href or href.startswith("//") or any(ord(char) < 32 for char in href):
+            return False
+
+        parsed = urlparse(href)
+        if parsed.scheme and parsed.scheme.lower() not in _ALLOWED_HREF_SCHEMES:
+            return False
+
+        return True
