@@ -2,6 +2,7 @@ import base64
 import http.server
 import json
 import os
+import platform
 import socketserver
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 
 # Config
 PORT = 8000
+SERVER_HOST = "127.0.0.1"
 
 
 def _resolve_src_dir(root_dir: Path) -> Path:
@@ -163,11 +165,17 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         }
 
     def status_payload(self):
+        from winstyles import __version__
+        from winstyles.infra.system import SystemAPI
+
         return {
             "status": "ok",
             "mode": "frozen" if IS_FROZEN else "development",
             "frontend_dir": str(FRONTEND_DIR),
             "src_dir": str(SRC_DIR),
+            "version": __version__,
+            "os": platform.platform(),
+            "is_admin": SystemAPI.is_admin(),
         }
 
     def dispatch_command(self, name, payload):
@@ -527,10 +535,10 @@ class ReusableTCPServer(socketserver.TCPServer):
 
 
 def run_server():
-    with ReusableTCPServer(("", PORT), ApiHandler) as httpd:
-        print(f"Server started at http://localhost:{PORT}")
+    with ReusableTCPServer((SERVER_HOST, PORT), ApiHandler) as httpd:
+        print(f"Server started at http://{SERVER_HOST}:{PORT}")
         print("Press Ctrl+C to stop")
-        webbrowser.open(f"http://localhost:{PORT}")
+        webbrowser.open(f"http://{SERVER_HOST}:{PORT}")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

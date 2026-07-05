@@ -75,7 +75,7 @@ def scan(
         None,
         "--category",
         "-c",
-        help="指定扫描类别 (可多选): fonts, terminal, theme, vscode, browser, all",
+        help="指定扫描类别 (可多选): fonts, terminal, theme, wallpaper, cursor, vscode, all",
     ),
     output: Path | None = typer.Option(
         None,
@@ -271,7 +271,8 @@ def diff(
     """
     🔄 对比两个配置包的差异
     """
-    console.print(f"[bold blue]对比配置包: {package1} vs {package2}[/bold blue]")
+    if format == "table":
+        console.print(f"[bold blue]对比配置包: {package1} vs {package2}[/bold blue]")
 
     if format not in {"table", "json", "yaml"}:
         console.print(f"[red]不支持的输出格式: {format}[/red]")
@@ -316,7 +317,8 @@ def inspect(
     """
     🔎 检视配置包内容
     """
-    console.print(f"[bold blue]检视配置包: {package_path}[/bold blue]")
+    if format == "table":
+        console.print(f"[bold blue]检视配置包: {package_path}[/bold blue]")
 
     if format not in {"table", "json", "yaml"}:
         console.print(f"[red]不支持的输出格式: {format}[/red]")

@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from start_web_ui import ApiError, ApiHandler, _resolve_src_dir
+from start_web_ui import SERVER_HOST, ApiError, ApiHandler, _resolve_src_dir
+from winstyles import __version__
 from winstyles.domain.models import ScannedItem, ScanResult
 from winstyles.domain.types import ChangeType, SourceType
 
@@ -102,6 +103,10 @@ def test_status_payload_has_ok_status_and_mode() -> None:
     assert status["mode"] in {"development", "frozen"}
     assert "frontend_dir" in status
     assert "src_dir" in status
+    assert status["version"] == __version__
+    assert isinstance(status["os"], str)
+    assert isinstance(status["is_admin"], bool)
+    assert SERVER_HOST == "127.0.0.1"
 
 
 def test_unknown_command_raises_structured_api_error() -> None:

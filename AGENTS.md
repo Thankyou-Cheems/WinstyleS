@@ -1,52 +1,98 @@
 # AGENTS.md
 
-本文件约定如何同步维护项目文档与元信息。适用于所有贡献者。
+本文件是仓库协作路由器，不是唯一规则源。持久规则必须落到
+`docs/specs/`，本文件只保留入口、硬约束和收尾命令。
 
-## 同步维护规则
+## Repository Map
 
-- **版本号**: 修改 `pyproject.toml` 的 `version` 时，必须同步更新 `CHANGELOG.md`。
-- **新功能/行为变更**: 必须更新 `README.md`，必要时补充 `docs/`（如设计/用法）。
-- **命令/CLI 变更**: 更新 `README.md` 的用法示例与 `docs/design.md`（若涉及）。
-- **依赖变更**: 更新 `pyproject.toml` 中的 `dependencies`/`optional-dependencies`，并在 `CHANGELOG.md` 记录。
-- **仓库信息变更**: 更新 `pyproject.toml` 的 `project.urls` 与 `README.md` 徽章/链接。
+- CLI: `src/winstyles/main.py`
+- Core orchestration: `src/winstyles/core/engine.py`
+- Scanners/apply adapters: `src/winstyles/plugins/`
+- System adapters: `src/winstyles/infra/`
+- Local Web GUI: `start_web_ui.py` + `frontend/`
+- Architecture background: `docs/ARCHITECTURE.md`
+- Canonical contracts: `docs/specs/`
+- Incident log: `docs/PITFALLS.md`
+- Decisions: `docs/adr/`
 
-## 发布前检查清单（Release Checklist）
+## Spec-Anchored Rules
 
-- `CHANGELOG.md` 已记录本次变更并标明版本
-- `pyproject.toml` 版本与变更日志一致
-- `README.md` 与 `docs/` 的用法/截图/示例已同步
-- CI 全绿（ruff/black/mypy/pytest/coverage）
-- 关键命令本地验证通过（至少 `winstyles --version` 与 `winstyles scan`）
+- Durable cross-module behavior MUST be documented in `docs/specs/` before the
+  change is considered complete. Summaries in README/docs may link to specs but
+  must not restate normative clauses.
+- Import safety changes MUST preserve `docs/specs/import-safety.md`.
+- Web API changes MUST preserve `docs/specs/web-api.md`.
+- Release and quality-gate changes MUST preserve `docs/specs/quality-gates.md`.
+- New incidents MUST add a `docs/PITFALLS.md` entry and a regression test when
+  the failure mode is reproducible.
 
-## CI 失败处理原则
+## Documentation Sync Rules
 
-- 先看 **第一个失败步骤**，按顺序处理：`black` -> `ruff` -> `mypy` -> `pytest`
-- 若出现“0 tests collected”，必须补最低限度的测试覆盖
-- Windows 下输出编码报错时，避免 emoji 或设置控制台为 UTF-8
+- Version changes in `pyproject.toml` MUST update `CHANGELOG.md`.
+- New user-visible features or behavior changes MUST update `README.md` and, if
+  they affect durable contracts, the relevant `docs/specs/` file.
+- CLI changes MUST update README usage examples and `docs/design.md` if the
+  technical reference changes.
+- Dependency changes MUST update `pyproject.toml` and `CHANGELOG.md`.
+- Repository URL or badge changes MUST update `pyproject.toml` `project.urls`
+  and README links.
 
-## Landing the Plane (Session Completion)
+## Task Tracking
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+- Use bd for backlog and follow-up work.
+- On this Windows checkout, the canonical bd command is currently the WSL
+  binary:
 
-**MANDATORY WORKFLOW:**
+  ```bash
+  cd /mnt/d/Dev/WinstyleS
+  /home/cheems/dev/Beads/bd list --ignore-schema-skew
+  ```
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+- Windows `bd` may fail on the embedded schema; do not hand-edit `.beads`.
+- `bd sync` is not available in the current bd binaries. Use `bd vc status` to
+  check database version-control state until the T0 bd workflow task is resolved.
+
+## Quality Gates
+
+Use a Windows-owned uv environment. Do not reuse the checked-in `.venv` from WSL
+or Linux tooling.
+
+```powershell
+$env:UV_PROJECT_ENVIRONMENT = ".uv-verify"
+uv run --python 3.12 --extra dev python scripts\release_check.py
+Remove-Item Env:UV_PROJECT_ENVIRONMENT
+```
+
+The full release check runs black, ruff, mypy, pytest, `winstyles --version`,
+and `winstyles scan -f json`.
+
+## CI Failure Order
+
+Handle the first failing gate in order:
+
+1. `black`
+2. `ruff`
+3. `mypy`
+4. `pytest`
+
+If zero tests are collected, add minimum regression coverage. For Windows
+console encoding errors, avoid emoji in CLI output or force UTF-8 explicitly.
+
+## Landing the Plane
+
+Work is not complete until local changes are committed and pushed, unless the
+user explicitly asked for an uncommitted investigation.
+
+1. File bd issues for remaining work.
+2. Run quality gates when code changed.
+3. Update bd issue status when the active issue is finished.
+4. Run:
+
    ```bash
    git pull --rebase
-   bd sync
+   # bd sync is unavailable in current bd; use canonical bd vc status instead.
    git push
-   git status  # MUST show "up to date with origin"
+   git status
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-Use 'bd' for task tracking
+5. Report any untracked pre-existing files separately.

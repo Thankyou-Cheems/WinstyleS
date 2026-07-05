@@ -5,12 +5,16 @@
 ## [Unreleased]
 
 ### Added
+- 新增 spec-anchored 文档结构：`docs/ARCHITECTURE.md`、`docs/specs/`、ADR、PITFALLS 与 contract traceability 测试
 - 新增导入 apply 前管理员权限统一检查；权限不足时返回 `admin_required` 且不执行部分导入
 - 新增导入前自动备份包与 `import_log.json` 审计日志，便于失败定位与回退
 - 新增 Web API `/api/status` 与统一响应 envelope：`{ok,data,error,code,message}`
 - 新增 `scripts/release_check.py`，脚本化发布前质量门与关键命令检查
 
 ### Fixed
+- 修复 Web GUI 本地服务监听范围：改为只绑定 `127.0.0.1`
+- 修复 `winstyles diff/inspect -f json` stdout 被人类可读横幅污染的问题
+- 修复前端侧边栏版本显示仍为 `v0.1.0` 的问题
 - 修复字体更新页面运行时异常：使用 `ScannedItem.current_value`，避免访问不存在字段
 - 修复开源字体模型与配置包字体模型重名冲突：新增 `OpenSourceFontInfo` 并替换相关引用
 - 修复 `winstyles report --open` 重复打开浏览器的问题
@@ -45,6 +49,7 @@
 - 修复 Pydantic v2 `class Config` 弃用告警，并迁移 Ruff 配置到 `tool.ruff.lint`
 
 ### Changed
+- `WinstyleS_开发框架.md` 降级为历史记录，当前活跃规划改由 bd 与 `docs/specs/` 承载
 - 调整 `build.yml` 触发策略：移除 `pull_request` 触发，仅保留手动触发和 tag 触发
 - Web 前端统一处理后端 envelope 与错误码，扫描/导出/导入/报告等流程复用同一失败提示机制
 - README 新增能力分层说明，明确已完成能力、实验性限制与本地 Web GUI 边界

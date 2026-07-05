@@ -26,7 +26,7 @@
 实验性或受环境限制：
 - 写回 Windows Terminal / PowerShell Profile / VS Code 配置已实现，但仍建议先执行 `--dry-run`
 - 系统级注册表和字体相关项依赖 Windows 权限；需要管理员权限的包会在 apply 前中止
-- Web GUI 是本地服务模式，不提供远程访问或多用户隔离
+- Web GUI 是本地服务模式，仅绑定 loopback，不提供远程访问或多用户隔离
 
 ## 📋 支持的配置项
 
@@ -98,6 +98,7 @@ python -m winstyles gui
 
 这将自动启动简单的本地 Web 服务器并在默认浏览器中打开用户界面。
 界面支持扫描、报告生成、导出导入等所有核心功能。
+服务只监听 `127.0.0.1`，不作为远程管理界面使用。
 
 Web 导入说明：
 - 支持直接输入本地路径（`D:\path\to\my-style.zip`）
@@ -122,6 +123,8 @@ uv run --python 3.12 --extra dev black --check src tests
 uv run --python 3.12 --extra dev mypy src/winstyles
 
 # 发布前检查（完整质量门 + 关键命令）
+# Windows/WSL 不要共用同一个 .venv；Windows 验证建议使用独立环境名
+set UV_PROJECT_ENVIRONMENT=.uv-verify
 uv run --python 3.12 --extra dev python scripts/release_check.py
 
 # 快速检查（仅 winstyles --version 与 winstyles scan -f json）
@@ -130,8 +133,10 @@ uv run --python 3.12 --extra dev python scripts/release_check.py --quick
 
 ## 📖 文档
 
-- [贡献指南](CONTRIBUTING.md) - 开发环境设置、架构说明、代码规范
-- [技术设计](docs/design.md) - 详细的功能规格和数据结构
+- [贡献指南](CONTRIBUTING.md) - 开发环境设置和贡献流程
+- [架构说明](docs/ARCHITECTURE.md) - 当前代码结构和数据流
+- [技术参考](docs/design.md) - CLI、类别和文档入口
+- [契约规格](docs/specs) - 导入安全、Web API、质量门等持久规则
 - [更新日志](CHANGELOG.md) - 版本变更记录
 - [协作约定](AGENTS.md) - 文档同步与发布检查清单
 
