@@ -1,16 +1,14 @@
 # PITFALLS
 
-Newest entries first. Each incident should map to a spec clause and a
-regression pin when the failure mode can be reproduced.
+## 2026-10-03: Import tests must isolate audit output
 
-### 2026-07-05 - Shared `.venv` broke Windows uv verification
+The administrator-denial regression used real `Path.home()` for its audit log.
+It failed under the workspace sandbox and could leave artifacts in a developer's
+profile. Patch home to the test's temporary directory, as enforced by
+`test_import_aborts_admin_required_items_without_admin_on_windows`.
 
-Symptom: `uv run --python 3.12 --extra dev ...` failed while trying to remove
-`.venv\lib64` with Windows access denied.
+## 2026-07-05: Shared environment broke Windows uv verification
 
-Root cause: The repository contained a non-Windows virtual environment layout;
-Windows uv tried to reconcile it as the project environment.
-
-Spec: `docs/specs/quality-gates.md` `QG-02`, `QG-03`
-
-Pin: `tests/contracts/test_quality_gates_contract.py`
+`uv run --python 3.12 --extra dev ...` failed while trying to remove `.venv/lib64`
+with access denied. The environment was created by non-Windows tooling. Use a
+Windows-owned environment; setup is in [CONTRIBUTING](../CONTRIBUTING.md).

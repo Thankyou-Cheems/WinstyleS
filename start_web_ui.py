@@ -182,6 +182,10 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         if name == "status":
             return self.status_payload()
 
+        # Preview needs the structured engine plan in both runtime modes.
+        if name == "import_config" and payload.get("dryRun") is True:
+            return self.dispatch_command_direct(name, payload)
+
         # In frozen mode, call modules directly
         if IS_FROZEN:
             return self.dispatch_command_direct(name, payload)

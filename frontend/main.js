@@ -751,12 +751,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const importDryRunBtn = document.getElementById("importDryRunBtn");
   let selectedImportFile = null;
 
+  const importPreviewContent = document.getElementById("importPreviewContent");
+  let importReviewSource = null;
+  function invalidateImportReview() {
+    importReviewSource = null;
+    if (importPreviewContent) importPreviewContent.textContent = "配置包已更改，请重新预览变更。";
+  }
+  document.getElementById("importPath")?.addEventListener("input", invalidateImportReview);
+
   async function runImport(dryRun) {
     const btn = dryRun ? importDryRunBtn : importBtn;
     const statusPrefix = dryRun ? "预览" : "导入";
 
     setStatus(`${statusPrefix}中...`);
-    setButtonLoading(btn, true);
 
     const path = document.getElementById("importPath")?.value.trim() || "";
     const skipRestore = document.getElementById("importSkipRestore")?.checked || false;
@@ -766,9 +773,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!hasPath && !hasUpload) {
       outputTo("importOutput", "请输入配置包路径，或拖拽/选择一个 .zip 配置包");
       setStatus("请输入配置包路径", true);
-      setButtonLoading(btn, false);
       return;
     }
+
+    const reviewSource = hasPath ? path : selectedImportFile;
+    if (!dryRun && importReviewSource !== reviewSource) {
+      outputTo("importOutput", "请先预览当前配置包，再开始导入。");
+      setStatus("需要预览当前配置包", true);
+      return;
+    }
+    // An attempted apply can partially change state even if it reports failure.
+    if (!dryRun) importReviewSource = null;
+    if (dryRun) {
+      importReviewSource = null;
+      importPreviewContent.textContent = "正在读取配置包并生成计划...";
+    }
+    setButtonLoading(btn, true);
+    const otherBtn = dryRun ? importBtn : importDryRunBtn;
+    if (otherBtn) otherBtn.disabled = true;
 
     try {
       const payload = { dryRun, skipRestore };
@@ -786,18 +808,32 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       if (result !== null) {
+        if (dryRun) {
+          window.WinstyleSImportPlan.mount(importPreviewContent, result);
+          const currentPath = document.getElementById("importPath")?.value.trim() || "";
+          const currentSource = currentPath || selectedImportFile;
+          if (currentSource === reviewSource) importReviewSource = reviewSource;
+          else invalidateImportReview();
+        } else {
+          importReviewSource = null;
+          importPreviewContent.textContent = "导入操作已结束，详情见下方日志。再次导入前请重新预览。";
+        }
         if (typeof result === "string") {
           outputTo("importOutput", result);
         } else {
           outputTo("importOutput", JSON.stringify(result, null, 2));
         }
         setStatus(`${statusPrefix}完成`);
+      } else if (dryRun) {
+        importPreviewContent.textContent = "预览失败，详情见下方日志。";
       }
     } catch (err) {
       outputTo("importOutput", `${statusPrefix}失败: ${err}`);
       setStatus(`${statusPrefix}失败`, true);
+      if (dryRun) importPreviewContent.textContent = "预览失败，无法审阅此配置包。";
     } finally {
       setButtonLoading(btn, false);
+      if (otherBtn) otherBtn.disabled = false;
     }
   }
 
@@ -946,6 +982,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    invalidateImportReview();
+    selectedImportFile = null;
+    if (importPath) importPath.value = "";
     try {
       const base64 = await readFileAsDataUrl(file);
       selectedImportFile = { name: file.name, base64 };

@@ -562,11 +562,6 @@
                 <span class="toggle-track"></span>
                 <span class="toggle-label">跳过创建还原点</span>
               </label>
-              <label class="toggle-switch">
-                <input type="checkbox" id="importMergeMode" />
-                <span class="toggle-track"></span>
-                <span class="toggle-label">合并模式（保留现有配置）</span>
-              </label>
             </div>
           </div>
 
@@ -588,10 +583,10 @@
           <div class="card-header">
             <div class="card-title-group">
               <h2 class="card-title">变更预览</h2>
-              <p class="card-desc">以下是导入后将应用的配置变更</p>
+              <p class="card-desc">按类别和风险审阅配置包；预览不会写入系统配置</p>
             </div>
           </div>
-          <div id="importPreviewContent">
+          <div id="importPreviewContent" aria-live="polite">
             <div class="empty-state" style="padding: 32px 0;">
               <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
                 style="width: 48px; height: 48px;">
@@ -838,6 +833,7 @@
     </main>
   </div>
 
+  <script src="import-plan.js" defer></script>
   <script src="main.js" defer></script>
 </body>
 

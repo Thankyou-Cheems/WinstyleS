@@ -34,6 +34,14 @@ jobs:
         
       - name: Type check with mypy
         run: mypy src/winstyles
+
+      - name: Set up Node for frontend tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test import review presentation
+        run: node --test tests/frontend/import-plan.test.cjs
         
       - name: Run tests
         run: pytest --cov=src/winstyles --cov-report=xml

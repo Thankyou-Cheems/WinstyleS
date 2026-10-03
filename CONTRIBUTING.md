@@ -1,156 +1,39 @@
-# 贡献指南
+# Development
 
-感谢你对 WinstyleS 项目的关注！欢迎提交 Issue 和 Pull Request。
+Python 3.11+ and Windows are the target runtime. The Web frontend uses plain
+HTML/CSS/JavaScript; Node's built-in test runner verifies presentation logic.
 
-## 🚀 开发环境设置
+Create an environment in your checkout; use a different environment for WSL:
 
-### 前置要求
-
-- Python 3.11+
-- Windows 10/11
-- Git
-
-### 快速开始
-
-```bash
-# 克隆仓库
-git clone https://github.com/Thankyou-Cheems/WinstyleS.git
-cd WinstyleS
-
-# 创建虚拟环境 (推荐)
-python -m venv .venv
-.venv\Scripts\activate
-
-# 安装开发依赖
-pip install -e ".[dev]"
-
-# 验证安装
-winstyles --version
+```powershell
+python -m venv .venv-windows
+.venv-windows\Scripts\python -m pip install -e ".[dev]"
 ```
 
-## 📁 项目结构
+Run checks using that environment's Python, in order:
 
-```
-src/winstyles/
-├── core/           # 核心业务逻辑 (StyleEngine, DiffAnalyzer)
-├── domain/         # Pydantic 数据模型
-├── infra/          # 基础设施 (注册表、文件系统、Windows API)
-├── plugins/        # 扫描器插件
-├── gui/            # CustomTkinter 图形界面
-├── utils/          # 通用工具
-└── main.py         # CLI 入口
+```powershell
+python -m black --check src tests start_web_ui.py
+python -m ruff check src tests start_web_ui.py
+python -m mypy src/winstyles
+python -m pytest tests
+node --test tests/frontend/import-plan.test.cjs
+python -m winstyles --version
 ```
 
-### 架构概述
+An optional read-only smoke scan is `python -m winstyles scan -f json`.
+`scripts/release_check.py` remains the uv-based release check, including that scan.
+Unit tests exercise writes against mock adapters and temp directories. A green
+test run does not validate real elevated Windows apply.
 
-项目采用**六边形架构**变体，核心原则：
+When editing a scanner, test through the engine with synthetic settings. When
+editing the browser UI, check loading, errors, empty results, keyboard access,
+long paths, light/dark mode, and narrow windows. Use mocked API responses for
+write workflows; runtime payloads are described in [behavior](docs/behavior.md).
 
-1. **核心层 (`core/`)** 不依赖具体 UI 或系统 API
-2. **基础设施层 (`infra/`)** 使用适配器模式，便于 Mock 测试
-3. **插件系统 (`plugins/`)** 所有扫描器继承 `BaseScanner`
+Keep changes on a branch and report verification gaps with the deliverable.
+Update the user-facing README when behavior changes. Store consequential choices
+with their reasons, rather than maintaining duplicate completion tables.
 
-```
-┌─────────────┐
-│   CLI/GUI   │  ← 接入层
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│ StyleEngine │  ← 核心层 (编排)
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│   Plugins   │  ← 扫描器插件
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│    Infra    │  ← 基础设施 (Registry/FileSystem)
-└─────────────┘
-```
-
-## 🧪 运行测试
-
-```bash
-# 运行所有测试
-pytest
-
-# 运行并显示覆盖率
-pytest --cov=src/winstyles --cov-report=term-missing
-
-# 仅运行单元测试
-pytest tests/unit/
-```
-
-## 📝 代码规范
-
-我们使用以下工具保证代码质量：
-
-```bash
-# 格式化代码
-black src/ tests/
-
-# 代码检查
-ruff check src/ tests/
-
-# 类型检查
-mypy src/winstyles
-```
-
-### 提交前检查清单
-
-- [ ] 代码已格式化 (`black`)
-- [ ] 通过 lint 检查 (`ruff`)
-- [ ] 测试通过 (`pytest`)
-- [ ] 添加/更新了相关测试
-- [ ] 更新了文档（如有需要）
-
-## 🔌 添加新扫描器
-
-1. 在 `src/winstyles/plugins/` 创建新文件
-2. 继承 `BaseScanner` 类
-3. 实现必需方法：`id`, `name`, `category`, `scan()`, `apply()`
-
-```python
-from winstyles.plugins.base import BaseScanner
-from winstyles.domain.models import ScannedItem
-
-class MyScanner(BaseScanner):
-    @property
-    def id(self) -> str:
-        return "my_scanner"
-    
-    @property
-    def name(self) -> str:
-        return "My Scanner"
-    
-    @property
-    def category(self) -> str:
-        return "my_category"
-    
-    def scan(self) -> list[ScannedItem]:
-        # 实现扫描逻辑
-        pass
-    
-    def apply(self, item: ScannedItem) -> bool:
-        # 实现应用逻辑
-        pass
-```
-
-## 📋 Issue 和 PR 规范
-
-### Issue
-
-- 🐛 Bug: 请提供复现步骤、系统版本、错误信息
-- ✨ Feature: 请描述使用场景和预期行为
-
-### Pull Request
-
-- 关联相关 Issue
-- 描述改动内容和原因
-- 确保 CI 通过
-
-## 💬 获取帮助
-
-- 提交 Issue
-- 在 Discussions 中讨论
-
-感谢你的贡献！🎉
+Legacy backlog records remain in `.beads/`; their historical Phase labels are
+not the current product plan. Old documentation is recoverable at `ce70fef`.

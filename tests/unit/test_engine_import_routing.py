@@ -143,6 +143,7 @@ def test_import_aborts_admin_required_items_without_admin_on_windows(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
     package_dir = tmp_path / "pkg"
     package_dir.mkdir(parents=True, exist_ok=True)
 
