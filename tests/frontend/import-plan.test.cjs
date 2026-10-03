@@ -38,3 +38,16 @@ test("shows skip reasons, administrator requirements and empty states", () => {
   assert.ok(renderRows([{ ...plan[0], requires_admin: true }]).includes("需要管理员"));
   assert.ok(renderRows([]).includes("没有符合筛选条件"));
 });
+
+test("reviewed rows show explicit selection, disabled dependencies and escaped values", () => {
+  const html = renderRows([
+    { ...plan[0], id: "theme", selectable: true, before: "light", after: '<img src=x onerror=bad()>' },
+    { ...plan[2], id: "readonly", selectable: false, before: null, after: { inventory: "font" } },
+  ], new Set(["theme"]));
+  assert.match(html, /value="theme" checked/);
+  assert.match(html, /value="readonly"\s+disabled/);
+  assert.ok(html.includes("当前 → 目标"));
+  assert.ok(html.includes("本机写入目标"));
+  assert.ok(!html.includes("<img"));
+  assert.ok(html.includes("&lt;img"));
+});

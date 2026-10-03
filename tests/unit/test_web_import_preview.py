@@ -81,3 +81,47 @@ def test_web_preview_cleans_upload_after_engine_error(tmp_path, monkeypatch):
     assert error.value.code == "unsafe_zip"
     assert error.value.data["error_code"] == "unsafe_zip"
     assert not upload.exists()
+
+
+@pytest.mark.parametrize("frozen", [False, True])
+@pytest.mark.parametrize("command", ["review_import", "apply_reviewed_import"])
+def test_review_commands_route_directly_and_clean_uploaded_snapshot(
+    tmp_path, monkeypatch, frozen, command
+):
+    monkeypatch.setattr(start_web_ui, "IS_FROZEN", frozen)
+    monkeypatch.setattr(start_web_ui.tempfile, "tempdir", str(tmp_path))
+    calls = []
+
+    class Engine:
+        def preview_import(self, path):
+            assert path.read_bytes() == b"fixture"
+            calls.append(("preview", path))
+            return {"dry_run_plan": [], "review_digest": "snapshot"}
+
+        def apply_reviewed_import(self, path, selected, digest, create_restore_point):
+            assert path.read_bytes() == b"fixture"
+            calls.append((selected, digest, create_restore_point, path))
+            return {
+                "error_code": "reviewed_apply_failed",
+                "error": "fixture failed",
+                "journal_path": "fixture.json",
+                "journal_digest": "receipt",
+            }
+
+    monkeypatch.setattr(start_web_ui, "get_engine", lambda: Engine())
+    handler = ApiHandler.__new__(ApiHandler)
+    payload = {
+        "fileBase64": base64.b64encode(b"fixture").decode(),
+        "selectedIds": ["one"],
+        "reviewDigest": "snapshot",
+        "skipRestore": True,
+    }
+    if command == "review_import":
+        assert handler.dispatch_command(command, payload)["review_digest"] == "snapshot"
+    else:
+        with pytest.raises(ApiError) as error:
+            handler.dispatch_command(command, payload)
+        assert error.value.data["journal_digest"] == "receipt"
+        assert calls[0][:3] == (["one"], "snapshot", False)
+    assert calls and not calls[0][-1].exists()
+    assert not list(tmp_path.iterdir())

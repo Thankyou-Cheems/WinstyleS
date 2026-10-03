@@ -541,7 +541,7 @@
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                开始导入
+                导入选中项
               </button>
             </div>
           </div>
@@ -583,7 +583,7 @@
           <div class="card-header">
             <div class="card-title-group">
               <h2 class="card-title">变更预览</h2>
-              <p class="card-desc">按类别和风险审阅配置包；预览不会写入系统配置</p>
+              <p class="card-desc">对比本机与目标值，勾选可恢复设置；预览不会写入系统配置</p>
             </div>
           </div>
           <div id="importPreviewContent" aria-live="polite">
@@ -602,6 +602,7 @@
         <div class="card card-output">
           <div class="output-header">
             <span class="output-title">导入日志</span>
+            <button class="btn-secondary" id="recoverImportBtn" disabled>撤回上次导入</button>
           </div>
           <pre class="output-content" id="importOutput">等待操作...</pre>
         </div>

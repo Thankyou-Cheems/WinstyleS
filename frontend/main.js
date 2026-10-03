@@ -753,11 +753,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const importPreviewContent = document.getElementById("importPreviewContent");
   let importReviewSource = null;
-  function invalidateImportReview() {
-    importReviewSource = null;
-    if (importPreviewContent) importPreviewContent.textContent = "配置包已更改，请重新预览变更。";
+  let importReviewDigest = null;
+  let recoveryReceipt = null;
+  const recoverImportBtn = document.getElementById("recoverImportBtn");
+  function keepRecoveryReceipt(value) {
+    if (value?.journal_path && value?.journal_digest) {
+      recoveryReceipt = value;
+      if (recoverImportBtn) recoverImportBtn.disabled = false;
+    }
   }
-  document.getElementById("importPath")?.addEventListener("input", invalidateImportReview);
+  function invalidateImportReview(message = "配置包已更改，请重新预览变更。") {
+    importReviewSource = null;
+    importReviewDigest = null;
+    if (importPreviewContent) importPreviewContent.textContent = message;
+  }
+  document.getElementById("importPath")?.addEventListener("input", () => invalidateImportReview());
 
   async function runImport(dryRun) {
     const btn = dryRun ? importDryRunBtn : importBtn;
@@ -782,6 +792,12 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatus("需要预览当前配置包", true);
       return;
     }
+    const selectedIds = window.WinstyleSImportPlan.getSelection(importPreviewContent);
+    if (!dryRun && !selectedIds.length) {
+      outputTo("importOutput", "请勾选至少一个可导入的设置。");
+      setStatus("未选择设置", true);
+      return;
+    }
     // An attempted apply can partially change state even if it reports failure.
     if (!dryRun) importReviewSource = null;
     if (dryRun) {
@@ -791,9 +807,14 @@ document.addEventListener("DOMContentLoaded", () => {
     setButtonLoading(btn, true);
     const otherBtn = dryRun ? importBtn : importDryRunBtn;
     if (otherBtn) otherBtn.disabled = true;
+    if (recoverImportBtn) recoverImportBtn.disabled = true;
 
     try {
       const payload = { dryRun, skipRestore };
+      if (!dryRun) {
+        payload.selectedIds = selectedIds;
+        payload.reviewDigest = importReviewDigest;
+      }
       if (hasPath) {
         payload.path = path;
       } else if (selectedImportFile) {
@@ -801,20 +822,25 @@ document.addEventListener("DOMContentLoaded", () => {
         payload.fileBase64 = selectedImportFile.base64;
       }
 
-      const result = await invokeOrWarn(
-        "import_config",
-        payload,
-        "importOutput"
-      );
+      let result;
+      try {
+        result = await invokeWeb(dryRun ? "review_import" : "apply_reviewed_import", payload);
+      } catch (error) {
+        keepRecoveryReceipt(error.data);
+        if (error.data) outputTo("importOutput", JSON.stringify(error.data, null, 2));
+        throw error;
+      }
 
       if (result !== null) {
         if (dryRun) {
-          window.WinstyleSImportPlan.mount(importPreviewContent, result);
+          const summary = window.WinstyleSImportPlan.mount(importPreviewContent, result);
+          importReviewDigest = summary.review_digest;
           const currentPath = document.getElementById("importPath")?.value.trim() || "";
           const currentSource = currentPath || selectedImportFile;
           if (currentSource === reviewSource) importReviewSource = reviewSource;
           else invalidateImportReview();
         } else {
+          keepRecoveryReceipt(result);
           importReviewSource = null;
           importPreviewContent.textContent = "导入操作已结束，详情见下方日志。再次导入前请重新预览。";
         }
@@ -828,17 +854,44 @@ document.addEventListener("DOMContentLoaded", () => {
         importPreviewContent.textContent = "预览失败，详情见下方日志。";
       }
     } catch (err) {
-      outputTo("importOutput", `${statusPrefix}失败: ${err}`);
+      outputTo("importOutput", `${statusPrefix}失败: ${formatApiError(err)}${err.data ? `\n${JSON.stringify(err.data, null, 2)}` : ""}`);
       setStatus(`${statusPrefix}失败`, true);
       if (dryRun) importPreviewContent.textContent = "预览失败，无法审阅此配置包。";
     } finally {
       setButtonLoading(btn, false);
       if (otherBtn) otherBtn.disabled = false;
+      if (recoverImportBtn) recoverImportBtn.disabled = !recoveryReceipt;
     }
   }
 
   importBtn?.addEventListener("click", () => runImport(false));
   importDryRunBtn?.addEventListener("click", () => runImport(true));
+
+  recoverImportBtn?.addEventListener("click", async () => {
+    if (!recoveryReceipt) return;
+    setButtonLoading(recoverImportBtn, true);
+    importBtn.disabled = true;
+    importDryRunBtn.disabled = true;
+    invalidateImportReview("撤回操作开始后，请重新预览本机与目标差异。");
+    try {
+      const result = await invokeWeb("recover_import", {
+        journalPath: recoveryReceipt.journal_path, journalDigest: recoveryReceipt.journal_digest,
+      });
+      keepRecoveryReceipt(result);
+      if (result.recovery_status === "restored") recoveryReceipt = null;
+      outputTo("importOutput", JSON.stringify(result, null, 2));
+      setStatus(result.recovery_status === "restored" ? "已撤回选中设置" : "部分恢复失败，请查看日志", result.recovery_status !== "restored");
+    } catch (error) {
+      keepRecoveryReceipt(error.data);
+      outputTo("importOutput", `${formatApiError(error)}${error.data ? `\n${JSON.stringify(error.data, null, 2)}` : ""}`);
+      setStatus("撤回未完成，请查看日志", true);
+    } finally {
+      setButtonLoading(recoverImportBtn, false);
+      recoverImportBtn.disabled = !recoveryReceipt;
+      importBtn.disabled = false;
+      importDryRunBtn.disabled = false;
+    }
+  });
 
   // ============================================
   // Open Folder Button

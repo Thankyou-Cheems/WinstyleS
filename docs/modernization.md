@@ -29,7 +29,7 @@ starting import requires a successful preview. Apply remains a separate action.
 Package-controlled strings are escaped, and raw JSON remains inspectable. The
 package's recorded path is labeled as such because asset relocation and adapters
 may choose a different destination. Preview is not a target-machine compatibility
-check, and filters are not a hidden selective-import feature.
+check. This first slice did not yet provide selective import.
 
 Scope: frontend import markup/styles/module, API preview dispatch, regression
 coverage, and the documents describing this workflow. The engine, package format,
@@ -45,10 +45,28 @@ apply adapters, account handling, and runtime stack remain reusable.
 | VS Code | Reviewed appearance settings and exported profiles | Existing appearance adapter. Built-in Sync already handles broader editor data; [exported profiles](https://code.visualstudio.com/docs/configure/profiles#share-profiles) can be a later explicit input. Avoid account tokens and automatic extension installation. |
 | PowerToys | Keyboard Manager mappings and FancyZones layouts | New integration candidate. Start with explicitly supplied backup/settings fixtures and read-only inspection; schema/version and monitor-specific layout compatibility need validation before write-back. |
 
-Next implementation: add package-vs-scan comparison to the Web UI using the
-existing diff model, followed by item selection enforced in the engine. PowerToys
-is the next new provider after review/diff are sound. Each step must have a
-synthetic end-to-end test before adding another provider.
+## Second slice
+
+The Web workflow now compares package targets with the current scanner output,
+shows actual local destinations, and sends explicit selected identities. The
+engine enforces eligibility and the package/current review digest, uses an immutable
+package snapshot, and checks drift before writing. No new runtime or provider is
+needed. Settings with unavailable old values or resource/script dependencies stay
+visible with reasons but cannot be selected.
+
+A local journal records only selected before/after values; failure triggers reverse
+restoration of touched settings. The response contains a recovery receipt, and the
+UI offers explicit recovery of its latest import. Recovery stops on conflicting
+current values. A real Terminal adapter test changes one setting in a temporary
+file and restores it while retaining unselected preferences. No live user apply
+was used to verify this work. See [behavior](behavior.md) for concurrency and
+cross-session limitations.
+
+The local API now requires a temporary index-issued session and validates Host,
+Origin and JSON requests. Build and release wait for the reusable CI matrix.
+These address the two baseline risks observed in review; neither proves elevated
+Windows apply. PowerToys read-only fixture inspection is the next provider candidate
+after users review this bounded workflow. Independent drift monitoring remains future work.
 
 ## Alternatives and official evidence
 
@@ -97,7 +115,6 @@ a current user requirement. Git at `ce70fef` retains all removed tracked materia
 Rewrote AGENTS/CONTRIBUTING/README around purpose, operations and specific checks;
 removed implicit mandatory push and the hardcoded external Beads workflow.
 
-License and historical backlog were preserved. A local-only Web service is not
-a multi-user authentication design. This slice adds no new write endpoint; server
-auth/origin hardening and build-to-release quality-gate dependency remain separate
-known follow-up work, not claims implied by this UI change.
+License and historical backlog were preserved. The first slice added no new write
+endpoint. The second added separate reviewed import/recovery endpoints and the
+local request checks above; this is still not a multi-user service design.

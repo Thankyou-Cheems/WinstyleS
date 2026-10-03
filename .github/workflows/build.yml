@@ -20,7 +20,13 @@ permissions:
   packages: read
 
 jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build:
+    needs: quality
     name: Build Windows Executable
     runs-on: windows-latest
     
