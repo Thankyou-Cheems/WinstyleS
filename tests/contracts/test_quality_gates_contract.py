@@ -1,5 +1,3 @@
-# enforces: docs/specs/quality-gates.md QG-01
-
 from scripts.release_check import build_commands
 
 

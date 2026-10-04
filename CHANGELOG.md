@@ -5,13 +5,24 @@
 ## [Unreleased]
 
 ### Added
-- 新增 spec-anchored 文档结构：`docs/ARCHITECTURE.md`、`docs/specs/`、ADR、PITFALLS 与 contract traceability 测试
+- Web 当前值/目标值对比与引擎强制逐项选择；只导入本机存在且可恢复的设置
+- 配置包/本机快照摘要、写前漂移检查与恢复回执；失败撤回已触及项，支持显式重试恢复
+- 本地临时会话 Cookie、Host/Origin/JSON 校验与请求大小限制
+- 导入审阅页显示结构化逐项计划、风险、管理员标记与跳过原因，支持类别/风险/搜索筛选
+- Web 开发版与打包版统一返回结构化 dry-run 计划；前端新增 Node 回归测试与 CI 检查
 - 新增导入 apply 前管理员权限统一检查；权限不足时返回 `admin_required` 且不执行部分导入
 - 新增导入前自动备份包与 `import_log.json` 审计日志，便于失败定位与回退
 - 新增 Web API `/api/status` 与统一响应 envelope：`{ok,data,error,code,message}`
 - 新增 `scripts/release_check.py`，脚本化发布前质量门与关键命令检查
 
+### Changed
+- 按 Matt Pocock writing-for-agents 哲学精简主入口，按需链接行为/开发/现代化文档；移除陈旧重复规格和设计模板，保留安全行为测试
+
 ### Fixed
+- 构建和发布依赖完整 Python 3.11/3.12 质量门；旧版独立 build 不再绕过 CI
+- 当前配置包成功预览后才允许从 Web 发起导入；更改来源或尝试导入后重新审阅
+- 删除未实现的合并模式开关，修复长导入计划卡片被 flex 布局裁剪的问题
+- 导入权限拒绝测试使用临时用户目录，避免写入开发者配置
 - 修复 Web GUI 本地服务监听范围：改为只绑定 `127.0.0.1`
 - 修复 `winstyles diff/inspect -f json` stdout 被人类可读横幅污染的问题
 - 修复前端侧边栏版本显示仍为 `v0.1.0` 的问题

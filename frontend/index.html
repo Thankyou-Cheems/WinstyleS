@@ -541,7 +541,7 @@
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                开始导入
+                导入选中项
               </button>
             </div>
           </div>
@@ -561,11 +561,6 @@
                 <input type="checkbox" id="importSkipRestore" />
                 <span class="toggle-track"></span>
                 <span class="toggle-label">跳过创建还原点</span>
-              </label>
-              <label class="toggle-switch">
-                <input type="checkbox" id="importMergeMode" />
-                <span class="toggle-track"></span>
-                <span class="toggle-label">合并模式（保留现有配置）</span>
               </label>
             </div>
           </div>
@@ -588,10 +583,10 @@
           <div class="card-header">
             <div class="card-title-group">
               <h2 class="card-title">变更预览</h2>
-              <p class="card-desc">以下是导入后将应用的配置变更</p>
+              <p class="card-desc">对比本机与目标值，勾选可恢复设置；预览不会写入系统配置</p>
             </div>
           </div>
-          <div id="importPreviewContent">
+          <div id="importPreviewContent" aria-live="polite">
             <div class="empty-state" style="padding: 32px 0;">
               <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
                 style="width: 48px; height: 48px;">
@@ -607,6 +602,7 @@
         <div class="card card-output">
           <div class="output-header">
             <span class="output-title">导入日志</span>
+            <button class="btn-secondary" id="recoverImportBtn" disabled>撤回上次导入</button>
           </div>
           <pre class="output-content" id="importOutput">等待操作...</pre>
         </div>
@@ -838,6 +834,7 @@
     </main>
   </div>
 
+  <script src="import-plan.js" defer></script>
   <script src="main.js" defer></script>
 </body>
 

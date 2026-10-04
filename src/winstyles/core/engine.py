@@ -366,6 +366,29 @@ class StyleEngine:
             return summary
         return self._finalize_import_audit(audit, summary)
 
+    def preview_import(self, package_path: Path) -> dict[str, Any]:
+        from winstyles.core.import_review import ReviewedImport
+
+        return ReviewedImport(self).preview(Path(package_path))
+
+    def apply_reviewed_import(
+        self,
+        package_path: Path,
+        selected_ids: list[str],
+        review_digest: str,
+        create_restore_point: bool = True,
+    ) -> dict[str, Any]:
+        from winstyles.core.import_review import ReviewedImport
+
+        return ReviewedImport(self).apply(
+            Path(package_path), selected_ids, review_digest, create_restore_point
+        )
+
+    def recover_reviewed_import(self, journal_path: Path, journal_digest: str) -> dict[str, Any]:
+        from winstyles.core.import_review import ReviewedImport
+
+        return ReviewedImport(self).recover(Path(journal_path), journal_digest)
+
     def _import_from_zip(
         self,
         package_path: Path,

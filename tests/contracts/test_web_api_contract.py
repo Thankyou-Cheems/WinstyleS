@@ -1,4 +1,4 @@
-# enforces: docs/specs/web-api.md WEB-01, WEB-02, WEB-03, WEB-04
+# Regression coverage for local Web response envelopes and status.
 
 from start_web_ui import SERVER_HOST, ApiHandler
 from winstyles import __version__

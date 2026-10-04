@@ -3,16 +3,19 @@ import http.server
 import json
 import os
 import platform
+import secrets
 import socketserver
 import subprocess
 import sys
 import tempfile
 import webbrowser
+from http.cookies import SimpleCookie
 from pathlib import Path
 
 # Config
 PORT = 8000
 SERVER_HOST = "127.0.0.1"
+SESSION_TOKEN = secrets.token_urlsafe(32)
 
 
 def _resolve_src_dir(root_dir: Path) -> Path:
@@ -83,6 +86,27 @@ def get_report_generator(scan_result, check_updates=True):
 
 
 class ApiHandler(http.server.SimpleHTTPRequestHandler):
+    def _trusted_host(self):
+        return self.headers.get("Host") == f"{SERVER_HOST}:{self.server.server_address[1]}"
+
+    def _session_valid(self):
+        cookie = SimpleCookie()
+        try:
+            cookie.load(self.headers.get("Cookie", ""))
+            value = cookie.get("winstyles_session")
+            return value is not None and secrets.compare_digest(value.value, SESSION_TOKEN)
+        except Exception:
+            return False
+
+    def end_headers(self):
+        if self.path in {"/", "/index.html"} and self._trusted_host():
+            self.send_header(
+                "Set-Cookie",
+                f"winstyles_session={SESSION_TOKEN}; HttpOnly; SameSite=Strict; Path=/",
+            )
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def log_message(self, format, *args):
         # Silence logs to avoid cluttering if needed, or keep for debugging
         sys.stderr.write(
@@ -90,7 +114,13 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         )
 
     def do_GET(self):
+        if not self._trusted_host():
+            self.send_error(403, "Untrusted Host")
+            return
         if self.path == "/api/status":
+            if not self._session_valid():
+                self._send_json(403, self._api_error("session_required", "Open the local UI first"))
+                return
             self._send_json(200, self._api_success(self.status_payload()))
             return
 
@@ -102,13 +132,32 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        origin = f"http://{SERVER_HOST}:{self.server.server_address[1]}"
+        if (
+            not self._trusted_host()
+            or not self._session_valid()
+            or self.headers.get("Origin") not in {None, origin}
+            or self.headers.get_content_type() != "application/json"
+        ):
+            self._send_json(
+                403,
+                self._api_error("request_forbidden", "Local UI session and JSON origin required"),
+            )
+            return
         if self.path.startswith("/api/"):
             self.handle_api()
         else:
             self.send_error(404, "API endpoint not found")
 
     def handle_api(self):
-        content_len = int(self.headers.get("Content-Length", 0))
+        try:
+            content_len = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            self._send_json(400, self._api_error("invalid_request", "Invalid Content-Length"))
+            return
+        if content_len < 0 or content_len > 48 * 1024 * 1024:
+            self._send_json(413, self._api_error("request_too_large", "Request exceeds 48 MiB"))
+            return
         post_body = self.rfile.read(content_len)
         try:
             payload = json.loads(post_body) if post_body else {}
@@ -117,6 +166,9 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
                 400,
                 self._api_error("invalid_json", "Invalid JSON body"),
             )
+            return
+        if not isinstance(payload, dict):
+            self._send_json(400, self._api_error("invalid_request", "JSON body must be an object"))
             return
 
         command_name = self.path.replace("/api/", "")
@@ -182,6 +234,13 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
         if name == "status":
             return self.status_payload()
 
+        if name in {"review_import", "apply_reviewed_import", "recover_import"}:
+            return self.dispatch_review_command(name, payload)
+
+        # Preview needs the structured engine plan in both runtime modes.
+        if name == "import_config" and payload.get("dryRun") is True:
+            return self.dispatch_command_direct(name, payload)
+
         # In frozen mode, call modules directly
         if IS_FROZEN:
             return self.dispatch_command_direct(name, payload)
@@ -227,6 +286,36 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
         else:
             raise ApiError("unknown_command", f"Unknown command: {name}", status_code=404)
+
+    def dispatch_review_command(self, name, payload):
+        from winstyles.core.import_review import ReviewError
+
+        temp_path = None
+        try:
+            engine = get_engine()
+            if name == "recover_import":
+                result = engine.recover_reviewed_import(
+                    Path(payload["journalPath"]), payload["journalDigest"]
+                )
+            else:
+                package_path, temp_path = self.resolve_import_path(payload)
+                if name == "review_import":
+                    result = engine.preview_import(Path(package_path))
+                else:
+                    result = engine.apply_reviewed_import(
+                        Path(package_path),
+                        payload.get("selectedIds"),
+                        payload.get("reviewDigest"),
+                        create_restore_point=not bool(payload.get("skipRestore")),
+                    )
+            if result.get("error_code"):
+                raise ApiError(result["error_code"], result["error"], 400, result)
+            return result
+        except ReviewError as exc:
+            raise ApiError(exc.code, str(exc), 400) from exc
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
 
     def dispatch_command_direct(self, name, payload):
         """Direct module calls for frozen mode (no subprocess)."""
@@ -351,7 +440,7 @@ class ApiHandler(http.server.SimpleHTTPRequestHandler):
 
         # Supports raw base64 and data URL formats.
         encoded = file_b64.split(",", 1)[1] if "," in file_b64 else file_b64
-        data = base64.b64decode(encoded)
+        data = base64.b64decode(encoded, validate=True)
 
         suffix = Path(file_name).suffix or ".zip"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
